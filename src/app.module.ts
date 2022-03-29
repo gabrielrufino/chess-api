@@ -13,7 +13,7 @@ import { GameModule } from './game/game.module';
       username: 'root',
       password: 'root',
       database: 'chess_api',
-      entities: [`${__dirname}/**/*.entity.ts`],
+      entities: [`${__dirname}/**/*.entity{.ts,.js}`],
       synchronize: false,
     }),
     GameModule,
