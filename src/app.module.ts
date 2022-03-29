@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { Game } from './game/entities/game.entity';
 import { GameModule } from './game/game.module';
 
 @Module({
@@ -13,7 +14,7 @@ import { GameModule } from './game/game.module';
       username: 'root',
       password: 'root',
       database: 'chess_api',
-      entities: [],
+      entities: [`${__dirname}/**/*.entity.ts`],
       synchronize: true,
     }),
     GameModule,
