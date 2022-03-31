@@ -10,13 +10,16 @@ import {
 import { GameService } from './game.service';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Game')
 @Controller('games')
 export class GameController {
   constructor(private readonly gameService: GameService) {}
 
   @Post()
-  create(@Body() createGameDto: CreateGameDto) {
+  public create(@Body() createGameDto: CreateGameDto) {
+    console.log(createGameDto);
     return this.gameService.create(createGameDto);
   }
 
