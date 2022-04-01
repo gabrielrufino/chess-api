@@ -1,4 +1,3 @@
-import { query } from 'express';
 import { MigrationInterface, QueryRunner, Table, TableColumn } from 'typeorm';
 
 export class CreateGamesTable1648593980697 implements MigrationInterface {
