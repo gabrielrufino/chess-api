@@ -7,10 +7,11 @@ import {
   Param,
   Delete,
 } from '@nestjs/common';
-import { GameService } from './game.service';
-import { CreateGameDto } from './dto/create-game.dto';
-import { UpdateGameDto } from './dto/update-game.dto';
 import { ApiTags } from '@nestjs/swagger';
+
+import { CreateGameDto } from './dto/create-game.dto';
+import { GameService } from './game.service';
+import { UpdateGameDto } from './dto/update-game.dto';
 
 @ApiTags('Game')
 @Controller('games')
@@ -24,7 +25,7 @@ export class GameController {
   }
 
   @Get()
-  findAll() {
+  public findAll() {
     return this.gameService.findAll();
   }
 

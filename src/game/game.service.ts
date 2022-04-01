@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
 import { CreateGameDto } from './dto/create-game.dto';
-import { UpdateGameDto } from './dto/update-game.dto';
 import { GameRepository } from './repositories/game.repository';
+import { UpdateGameDto } from './dto/update-game.dto';
 
 @Injectable()
 export class GameService {
@@ -15,8 +15,13 @@ export class GameService {
     return game;
   }
 
-  findAll() {
-    return `This action returns all game`;
+  public async findAll() {
+    const [data, total] = await this.gameRepository.findAndCount();
+
+    return {
+      data,
+      total,
+    };
   }
 
   findOne(id: number) {
