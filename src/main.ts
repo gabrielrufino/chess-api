@@ -4,7 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
-import { version } from '../package.json';
+import { version, description } from '../package.json';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,7 +15,7 @@ async function bootstrap() {
     app,
     new DocumentBuilder()
       .setTitle('Chess API')
-      .setDescription('Description here')
+      .setDescription(description)
       .setVersion(version)
       .build(),
   );
