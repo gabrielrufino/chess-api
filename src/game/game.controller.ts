@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -30,8 +31,8 @@ export class GameController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.gameService.findOne(+id);
+  public findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.gameService.findOne(id);
   }
 
   @Patch(':id')

@@ -24,8 +24,8 @@ export class GameService {
     };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} game`;
+  public async findOne(id: number) {
+    return this.gameRepository.findOne(id);
   }
 
   update(id: number, updateGameDto: UpdateGameDto) {
