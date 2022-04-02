@@ -31,8 +31,4 @@ export class GameService {
   update(id: number, updateGameDto: UpdateGameDto) {
     return `This action updates a #${id} game`;
   }
-
-  remove(id: number) {
-    return `This action removes a #${id} game`;
-  }
 }
