@@ -5,12 +5,13 @@ import { AppModule } from './../src/app.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Game } from '../src/game/entities/game.entity';
 
-describe('AppController (e2e)', () => {
+describe('AppModule (e2e)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
+        AppModule,
         TypeOrmModule.forRoot({
           type: 'sqlite',
           database: ':memory:',
@@ -19,7 +20,6 @@ describe('AppController (e2e)', () => {
           synchronize: true,
           logging: false,
         }),
-        AppModule,
       ],
     }).compile();
 
