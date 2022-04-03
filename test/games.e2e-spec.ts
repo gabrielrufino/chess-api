@@ -6,7 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Game } from '../src/game/entities/game.entity';
 import { GameModule } from '../src/game/game.module';
 
-describe('Games', () => {
+describe('GameModule (e2e)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
