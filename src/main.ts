@@ -1,18 +1,21 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
+import helmet from 'helmet';
 
-import { version } from '../package.json';
-import { ValidationPipe } from '@nestjs/common';
+import { AppModule } from './app.module';
+import { version, description } from '../package.json';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(helmet());
 
   const documentation = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
       .setTitle('Chess API')
-      .setDescription('Description here')
+      .setDescription(description)
       .setVersion(version)
       .build(),
   );

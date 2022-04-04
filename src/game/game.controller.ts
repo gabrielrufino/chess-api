@@ -5,7 +5,7 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -20,7 +20,6 @@ export class GameController {
 
   @Post()
   public create(@Body() createGameDto: CreateGameDto) {
-    console.log(createGameDto);
     return this.gameService.create(createGameDto);
   }
 
@@ -30,17 +29,12 @@ export class GameController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.gameService.findOne(+id);
+  public findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.gameService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateGameDto: UpdateGameDto) {
     return this.gameService.update(+id, updateGameDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.gameService.remove(+id);
   }
 }

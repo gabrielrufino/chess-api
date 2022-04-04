@@ -24,15 +24,11 @@ export class GameService {
     };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} game`;
+  public async findOne(id: number) {
+    return this.gameRepository.findOne(id);
   }
 
   update(id: number, updateGameDto: UpdateGameDto) {
     return `This action updates a #${id} game`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} game`;
   }
 }
