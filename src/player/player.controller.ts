@@ -16,7 +16,7 @@ export class PlayerController {
   constructor(private readonly playerService: PlayerService) {}
 
   @Post()
-  create(@Body() createPlayerDto: CreatePlayerDto) {
+  public create(@Body() createPlayerDto: CreatePlayerDto) {
     return this.playerService.create(createPlayerDto);
   }
 
