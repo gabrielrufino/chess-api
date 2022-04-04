@@ -1,7 +1,7 @@
 {
   "name": "chess-api",
   "version": "0.0.1",
-  "description": "",
+  "description": "Free API for Chess",
   "author": "Gabriel Rufino <contato@gabrielrufino.com>",
   "private": true,
   "license": "MIT",
