@@ -24,15 +24,15 @@ export class PlayerService {
     };
   }
 
-  public findOne(id: number) {
+  public async findOne(id: number) {
     return this.playerRepository.findOne(id);
   }
 
-  public update(id: number, updatePlayerDto: UpdatePlayerDto) {
+  public async update(id: number, updatePlayerDto: UpdatePlayerDto) {
     return `This action updates a #${id} player`;
   }
 
-  public remove(id: number) {
+  public async remove(id: number) {
     return `This action removes a #${id} player`;
   }
 }
