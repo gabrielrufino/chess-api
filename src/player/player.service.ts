@@ -15,8 +15,13 @@ export class PlayerService {
     return player;
   }
 
-  findAll() {
-    return `This action returns all player`;
+  public async findAll() {
+    const [players, total] = await this.playerRepository.findAndCount();
+
+    return {
+      data: players,
+      total,
+    };
   }
 
   findOne(id: number) {

@@ -24,7 +24,7 @@ export class PlayerController {
   }
 
   @Get()
-  findAll() {
+  public findAll() {
     return this.playerService.findAll();
   }
 
