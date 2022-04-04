@@ -24,8 +24,8 @@ export class PlayerService {
     };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} player`;
+  public findOne(id: number) {
+    return this.playerRepository.findOne(id);
   }
 
   update(id: number, updatePlayerDto: UpdatePlayerDto) {
