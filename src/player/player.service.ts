@@ -28,11 +28,11 @@ export class PlayerService {
     return this.playerRepository.findOne(id);
   }
 
-  update(id: number, updatePlayerDto: UpdatePlayerDto) {
+  public update(id: number, updatePlayerDto: UpdatePlayerDto) {
     return `This action updates a #${id} player`;
   }
 
-  remove(id: number) {
+  public remove(id: number) {
     return `This action removes a #${id} player`;
   }
 }
