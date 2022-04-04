@@ -9,7 +9,7 @@ export class PlayerService {
   constructor(private readonly playerRepository: PlayerRepository) {}
 
   public async create(createPlayerDto: CreatePlayerDto) {
-    const player = this.playerRepository.create();
+    const player = this.playerRepository.create(createPlayerDto);
     await this.playerRepository.save(player);
 
     return player;
