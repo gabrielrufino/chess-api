@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -12,6 +13,7 @@ import { CreatePlayerDto } from './dto/create-player.dto';
 import { PlayerService } from './player.service';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 
+@ApiTags('Player')
 @Controller('players')
 export class PlayerController {
   constructor(private readonly playerService: PlayerService) {}
