@@ -16,7 +16,9 @@ export class GameService {
   }
 
   public async findAll() {
-    const [data, total] = await this.gameRepository.findAndCount();
+    const [data, total] = await this.gameRepository.findAndCount({
+      relations: ['whitePlayer', 'blackPlayer'],
+    });
 
     return {
       data,
@@ -25,7 +27,9 @@ export class GameService {
   }
 
   public async findOne(id: number) {
-    return this.gameRepository.findOne(id);
+    return this.gameRepository.findOne(id, {
+      relations: ['whitePlayer', 'blackPlayer'],
+    });
   }
 
   update(id: number, updateGameDto: UpdateGameDto) {
