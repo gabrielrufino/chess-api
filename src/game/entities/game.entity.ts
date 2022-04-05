@@ -1,7 +1,10 @@
+import { Player } from 'src/player/entities/player.entity';
 import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
@@ -18,4 +21,18 @@ export class Game {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @Column({ name: 'white_player_id' })
+  whitePlayerId: number;
+
+  @Column({ name: 'black_player_id' })
+  blackPlayerId: number;
+
+  @ManyToOne(() => Player)
+  @JoinColumn({ name: 'white_player_id' })
+  whitePlayer: Player;
+
+  @ManyToOne(() => Player)
+  @JoinColumn({ name: 'black_player_id' })
+  blackPlayer: Player;
 }
