@@ -33,6 +33,6 @@ export class PlayerService {
   }
 
   public async remove(id: number) {
-    return `This action removes a #${id} player`;
+    return this.playerRepository.softDelete(id);
   }
 }
