@@ -17,6 +17,6 @@ export class Player {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at' })
+  @DeleteDateColumn({ name: 'deleted_at', select: false })
   deletedAt: Date;
 }
