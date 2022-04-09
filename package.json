@@ -19,6 +19,7 @@
     "migration:create": "typeorm migration:create --dir ./src/migrations --name",
     "migration:run": "npm run build && typeorm migration:run --config ./ormconfig.json",
     "migration:revert": "npm run build && typeorm migration:revert --config ./ormconfig.json",
+    "reinstall": "rimraf node_modules && npm ci",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
