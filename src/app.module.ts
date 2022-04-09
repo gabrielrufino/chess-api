@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { TerminusModule } from '@nestjs/terminus';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { GameModule } from './game/game.module';
 import { PlayerModule } from './player/player.module';
 
@@ -16,10 +16,11 @@ import { PlayerModule } from './player/player.module';
       entities: [`${__dirname}/**/*.entity{.ts,.js}`],
       synchronize: false,
     }),
+    TerminusModule,
     GameModule,
     PlayerModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [],
 })
 export class AppModule {}

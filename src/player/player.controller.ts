@@ -7,6 +7,7 @@ import {
   Patch,
   Param,
   Delete,
+  ParseIntPipe,
 } from '@nestjs/common';
 
 import { CreatePlayerDto } from './dto/create-player.dto';
@@ -24,22 +25,25 @@ export class PlayerController {
   }
 
   @Get()
-  findAll() {
+  public findAll() {
     return this.playerService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.playerService.findOne(+id);
+  public findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.playerService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePlayerDto: UpdatePlayerDto) {
-    return this.playerService.update(+id, updatePlayerDto);
+  public update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updatePlayerDto: UpdatePlayerDto,
+  ) {
+    return this.playerService.update(id, updatePlayerDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.playerService.remove(+id);
+  public remove(@Param('id', ParseIntPipe) id: number) {
+    return this.playerService.remove(id);
   }
 }

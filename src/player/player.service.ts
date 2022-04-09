@@ -15,19 +15,24 @@ export class PlayerService {
     return player;
   }
 
-  findAll() {
-    return `This action returns all player`;
+  public async findAll() {
+    const [players, total] = await this.playerRepository.findAndCount();
+
+    return {
+      data: players,
+      total,
+    };
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} player`;
+  public async findOne(id: number) {
+    return this.playerRepository.findOne(id);
   }
 
-  update(id: number, updatePlayerDto: UpdatePlayerDto) {
+  public async update(id: number, updatePlayerDto: UpdatePlayerDto) {
     return `This action updates a #${id} player`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} player`;
+  public async remove(id: number) {
+    return this.playerRepository.softDelete(id);
   }
 }

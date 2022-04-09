@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsDefined } from 'class-validator';
+import { IsDateString, IsDefined, IsNumber } from 'class-validator';
 
 export class CreateGameDto {
   @ApiProperty({ example: '2022-03-29 20:00:00' })
@@ -11,4 +11,14 @@ export class CreateGameDto {
   @IsDefined()
   @IsDateString()
   endsAt: string;
+
+  @ApiProperty({ example: 1 })
+  @IsDefined()
+  @IsNumber()
+  whitePlayerId: number;
+
+  @ApiProperty({ example: 2 })
+  @IsDefined()
+  @IsNumber()
+  blackPlayerId: number;
 }

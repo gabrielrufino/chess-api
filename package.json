@@ -1,7 +1,7 @@
 {
   "name": "chess-api",
   "version": "0.0.1",
-  "description": "",
+  "description": "Free API for Chess",
   "author": "Gabriel Rufino <contato@gabrielrufino.com>",
   "private": true,
   "license": "MIT",
@@ -19,12 +19,14 @@
     "migration:create": "typeorm migration:create --dir ./src/migrations --name",
     "migration:run": "npm run build && typeorm migration:run --config ./ormconfig.json",
     "migration:revert": "npm run build && typeorm migration:revert --config ./ormconfig.json",
+    "reinstall": "rimraf node_modules && npm ci",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:e2e:cov": "npm run test:e2e -- --coverage"
+    "test:e2e:cov": "npm run test:e2e -- --coverage",
+    "test:e2e:watch": "npm run test:e2e -- --watch"
   },
   "dependencies": {
     "@nestjs/common": "^8.0.0",
@@ -32,7 +34,9 @@
     "@nestjs/core": "^8.0.0",
     "@nestjs/platform-express": "^8.0.0",
     "@nestjs/swagger": "^5.2.1",
+    "@nestjs/terminus": "^8.0.6",
     "@nestjs/typeorm": "^8.0.3",
+    "chess.js": "^0.13.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.13.2",
     "helmet": "^5.0.2",
