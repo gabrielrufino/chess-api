@@ -6,7 +6,6 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "prebuild": "rimraf dist",
     "build": "nest build",
     "docs": "npx @compodoc/compodoc -p tsconfig.json -s",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
