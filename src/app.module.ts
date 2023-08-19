@@ -15,7 +15,7 @@ import { PlayerModule } from './player/player.module';
       type: 'postgres',
       url: process.env.DATABASE_URL,
       entities: [`${__dirname}/**/*.entity{.ts,.js}`],
-      synchronize: false,
+      synchronize: process.env.DATABASE_SYNCHRONIZE === 'true',
     }),
     LoggerModule.forRoot(),
     TerminusModule,
