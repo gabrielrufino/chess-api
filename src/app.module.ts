@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TerminusModule } from '@nestjs/terminus';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { LoggerModule } from 'nestjs-pino';
 
 import { AppController } from './app.controller';
 import { GameModule } from './game/game.module';
@@ -16,6 +17,7 @@ import { PlayerModule } from './player/player.module';
       entities: [`${__dirname}/**/*.entity{.ts,.js}`],
       synchronize: false,
     }),
+    LoggerModule.forRoot(),
     TerminusModule,
     GameModule,
     PlayerModule,
