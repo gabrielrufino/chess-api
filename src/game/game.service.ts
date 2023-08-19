@@ -18,8 +18,8 @@ export class GameService {
     const { whitePlayerId, blackPlayerId } = createGameDto;
 
     const [whitePlayer, blackPlayer] = await Promise.all([
-      this.playerRepository.findOne(whitePlayerId),
-      this.playerRepository.findOne(blackPlayerId),
+      this.playerRepository.findOneBy({ id: whitePlayerId }),
+      this.playerRepository.findOneBy({ id: blackPlayerId }),
     ]);
 
     if (!whitePlayer || !blackPlayer) {
@@ -48,7 +48,8 @@ export class GameService {
   }
 
   public async findOne(id: number) {
-    return this.gameRepository.findOne(id, {
+    return this.gameRepository.findOne({
+      where: { id },
       relations: ['whitePlayer', 'blackPlayer'],
     });
   }
