@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PlayerRepository } from 'src/player/repositories/player.repository';
 
 import { GameService } from './game.service';
 import { GameRepository } from './repositories/game.repository';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { PlayerEntity } from 'src/player/entities/player.entity';
 
 describe('GameService', () => {
   let service: GameService;
@@ -11,7 +12,10 @@ describe('GameService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         { provide: GameRepository, useValue: {} },
-        { provide: PlayerRepository, useValue: {} },
+        {
+          provide: getRepositoryToken(PlayerEntity),
+          useValue: {},
+        },
         GameService,
       ],
     }).compile();
