@@ -3,10 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { PlayerController } from './player.controller';
 import { PlayerService } from './player.service';
-import { PlayerRepository } from './repositories/player.repository';
+import { PlayerEntity } from './entities/player.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([PlayerRepository])],
+  imports: [TypeOrmModule.forFeature([PlayerEntity])],
   controllers: [PlayerController],
   providers: [PlayerService],
   exports: [TypeOrmModule],

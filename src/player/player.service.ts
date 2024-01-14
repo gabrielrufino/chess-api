@@ -2,11 +2,16 @@ import { Injectable } from '@nestjs/common';
 
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
-import { PlayerRepository } from './repositories/player.repository';
+import { Repository } from 'typeorm';
+import { PlayerEntity } from './entities/player.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class PlayerService {
-  constructor(private readonly playerRepository: PlayerRepository) {}
+  constructor(
+    @InjectRepository(PlayerEntity)
+    private readonly playerRepository: Repository<PlayerEntity>,
+  ) {}
 
   public async create(createPlayerDto: CreatePlayerDto) {
     const player = this.playerRepository.create(createPlayerDto);

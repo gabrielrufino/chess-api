@@ -1,4 +1,4 @@
-import { Player } from 'src/player/entities/player.entity';
+import { PlayerEntity } from 'src/player/entities/player.entity';
 import {
   Column,
   CreateDateColumn,
@@ -28,11 +28,11 @@ export class Game {
   @Column({ name: 'black_player_id' })
   blackPlayerId: number;
 
-  @ManyToOne(() => Player)
+  @ManyToOne(() => PlayerEntity)
   @JoinColumn({ name: 'white_player_id' })
-  whitePlayer: Player;
+  whitePlayer: PlayerEntity;
 
-  @ManyToOne(() => Player)
+  @ManyToOne(() => PlayerEntity)
   @JoinColumn({ name: 'black_player_id' })
-  blackPlayer: Player;
+  blackPlayer: PlayerEntity;
 }
