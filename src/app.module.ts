@@ -17,7 +17,15 @@ import { PlayerModule } from './player/player.module';
       entities: [`${__dirname}/**/*.entity{.ts,.js}`],
       synchronize: process.env.DATABASE_SYNCHRONIZE === 'true',
     }),
-    LoggerModule.forRoot(),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty' }
+            : undefined,
+      },
+    }),
     TerminusModule,
     GameModule,
     PlayerModule,
