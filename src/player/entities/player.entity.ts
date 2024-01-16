@@ -11,12 +11,12 @@ export class PlayerEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  name: string;
+  @Column({ nullable: true })
+  userId: string | null;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt: Date;
 
-  @DeleteDateColumn({ name: 'deleted_at', select: false })
+  @DeleteDateColumn({ select: false })
   deletedAt: Date;
 }
