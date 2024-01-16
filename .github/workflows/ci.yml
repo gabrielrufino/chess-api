@@ -12,6 +12,8 @@ jobs:
       - uses: gabrielrufino/node-ci@v1
   dockerfile-ci:
     name: Dockerfile CI
+    needs:
+      - node-ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
