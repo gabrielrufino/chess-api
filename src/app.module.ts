@@ -7,6 +7,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller';
 import { GameModule } from './game/game.module';
 import { PlayerModule } from './player/player.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PlayerModule } from './player/player.module';
       },
     }),
     TerminusModule,
+    AuthModule,
     GameModule,
     PlayerModule,
   ],
