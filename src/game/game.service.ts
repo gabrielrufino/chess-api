@@ -1,18 +1,19 @@
 import { Injectable } from '@nestjs/common';
 
 import { CreateGameDto } from './dto/create-game.dto';
-import { GameRepository } from './repositories/game.repository';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { PlayerNotFoundException } from 'src/player/exceptions/player-not-found.exception';
 import { GameAgainstYourselfException } from './exceptions/game-against-yourself.exception';
 import { Repository } from 'typeorm';
 import { PlayerEntity } from 'src/player/entities/player.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { GameEntity } from './entities/game.entity';
 
 @Injectable()
 export class GameService {
   constructor(
-    private readonly gameRepository: GameRepository,
+    @InjectRepository(GameEntity)
+    private readonly gameRepository: Repository<GameEntity>,
     @InjectRepository(PlayerEntity)
     private readonly playerRepository: Repository<PlayerEntity>,
   ) {}
@@ -57,6 +58,7 @@ export class GameService {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   update(id: number, updateGameDto: UpdateGameDto) {
     return `This action updates a #${id} game`;
   }

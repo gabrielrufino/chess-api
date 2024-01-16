@@ -2,18 +2,18 @@ import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import faker from '@faker-js/faker';
-import request, { SuperTest, Request } from 'supertest';
+import * as request from 'supertest';
 
-import { Game } from '../src/game/entities/game.entity';
+import { GameEntity } from '../src/game/entities/game.entity';
 import { GameModule } from '../src/game/game.module';
-import { Player } from '../src/player/entities/player.entity';
+import { PlayerEntity } from '../src/player/entities/player.entity';
 import { PlayerModule } from '../src/player/player.module';
 import { CreateGameDto } from 'src/game/dto/create-game.dto';
 import { createPlayer } from './helpers/create-player';
 
 describe('GameModule (e2e)', () => {
   let app: INestApplication;
-  let client: SuperTest<Request>;
+  let client: request.SuperTest<request.Request>;
 
   beforeEach(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -22,7 +22,7 @@ describe('GameModule (e2e)', () => {
           type: 'sqlite',
           database: ':memory:',
           dropSchema: true,
-          entities: [Game, Player],
+          entities: [GameEntity, PlayerEntity],
           synchronize: true,
           logging: false,
         }),
@@ -50,15 +50,14 @@ describe('GameModule (e2e)', () => {
         createPlayer(app),
       ]);
 
-      return request(app.getHttpServer())
-        .post('/games')
-        .send({
-          startsAt: '2022-04-03 17:00:00',
-          endsAt: '2022-04-03 17:15:00',
-          whitePlayerId,
-          blackPlayerId,
-        } as CreateGameDto)
-        .expect(HttpStatus.CREATED);
+      const response = await client.post('/games').send({
+        startsAt: '2022-04-03 17:00:00',
+        endsAt: '2022-04-03 17:15:00',
+        whitePlayerId,
+        blackPlayerId,
+      } as CreateGameDto);
+
+      expect(response.status).toBe(HttpStatus.CREATED);
     });
 
     it('Should return an error when does not receive the startsAt', async () => {

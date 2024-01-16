@@ -1,5 +1,5 @@
 import faker from '@faker-js/faker';
-import request from 'supertest';
+import * as request from 'supertest';
 import { PlayerEntity } from 'src/player/entities/player.entity';
 import { CreatePlayerDto } from 'src/player/dto/create-player.dto';
 import { HttpStatus, INestApplication } from '@nestjs/common';

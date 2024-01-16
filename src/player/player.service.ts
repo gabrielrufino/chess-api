@@ -33,6 +33,7 @@ export class PlayerService {
     return this.playerRepository.findOneBy({ id });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async update(id: number, updatePlayerDto: UpdatePlayerDto) {
     return `This action updates a #${id} player`;
   }
