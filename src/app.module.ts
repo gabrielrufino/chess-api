@@ -8,6 +8,7 @@ import { AppController } from './app.controller';
 import { GameModule } from './game/game.module';
 import { PlayerModule } from './player/player.module';
 import { AuthModule } from './auth/auth.module';
+import { GuestUserModule } from './guest-user/guest-user.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AuthModule } from './auth/auth.module';
     }),
     TerminusModule,
     AuthModule,
+    GuestUserModule,
     GameModule,
     PlayerModule,
   ],

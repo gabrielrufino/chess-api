@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
@@ -6,12 +5,11 @@ import { JwtService } from '@nestjs/jwt';
 export class AuthService {
   constructor(private readonly jwtService: JwtService) {}
 
-  public async createGuestUser() {
-    return {
-      token: await this.jwtService.signAsync({
-        sub: randomUUID(),
-        isGuest: true,
-      }),
-    };
+  public async createGuestToken(params: { id: string; name: string }) {
+    return this.jwtService.signAsync({
+      sub: params.id,
+      name: params.name,
+      isGuest: true,
+    });
   }
 }
