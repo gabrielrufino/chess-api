@@ -6,14 +6,18 @@ import {
   Patch,
   Param,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CreateGameDto } from './dto/create-game.dto';
 import { GameService } from './game.service';
 import { UpdateGameDto } from './dto/update-game.dto';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @ApiTags('Game')
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 @Controller('games')
 export class GameController {
   constructor(private readonly gameService: GameService) {}

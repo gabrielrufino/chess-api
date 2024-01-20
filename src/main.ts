@@ -18,6 +18,7 @@ async function bootstrap() {
       .setTitle('Chess API')
       .setDescription(description)
       .setVersion(version)
+      .addBearerAuth()
       .build(),
   );
   SwaggerModule.setup('api', app, documentation);
