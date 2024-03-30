@@ -18,6 +18,7 @@ import { GuestUserModule } from './guest-user/guest-user.module';
       url: process.env.DATABASE_URL,
       entities: [`${__dirname}/**/*.entity{.ts,.js}`],
       synchronize: process.env.DATABASE_SYNCHRONIZE === 'true',
+      logging: true,
     }),
     LoggerModule.forRoot({
       pinoHttp: {
@@ -31,8 +32,8 @@ import { GuestUserModule } from './guest-user/guest-user.module';
     TerminusModule,
     AuthModule,
     GuestUserModule,
-    GameModule,
     PlayerModule,
+    GameModule,
   ],
   controllers: [AppController],
   providers: [],

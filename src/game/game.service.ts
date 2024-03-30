@@ -2,12 +2,11 @@ import { Injectable } from '@nestjs/common';
 
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
-import { PlayerNotFoundException } from 'src/player/exceptions/player-not-found.exception';
-import { GameAgainstYourselfException } from './exceptions/game-against-yourself.exception';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { PlayerEntity } from 'src/player/entities/player.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { GameEntity } from './entities/game.entity';
+import { AuthUser } from 'src/auth/auth-user.interface';
 
 @Injectable()
 export class GameService {
@@ -18,26 +17,39 @@ export class GameService {
     private readonly playerRepository: Repository<PlayerEntity>,
   ) {}
 
-  public async create(createGameDto: CreateGameDto) {
-    const { whitePlayerId, blackPlayerId } = createGameDto;
+  public async create(createGameDto: CreateGameDto, authUser: AuthUser) {
+    const player = await this.playerRepository.findOneByOrFail({
+      userId: authUser.sub,
+    });
 
-    const [whitePlayer, blackPlayer] = await Promise.all([
-      this.playerRepository.findOneBy({ id: whitePlayerId }),
-      this.playerRepository.findOneBy({ id: blackPlayerId }),
-    ]);
+    const gameWaitingPlayer = await this.gameRepository
+      .createQueryBuilder('game')
+      .where([{ whitePlayerId: IsNull() }, { blackPlayerId: IsNull() }])
+      .andWhere(
+        "COALESCE(game.whitePlayerId, '') != :playerId AND COALESCE(game.blackPlayerId, '') != :playerId",
+        { playerId: player.id },
+      )
+      .andWhere({ duration: createGameDto.duration })
+      .getOne();
 
-    if (!whitePlayer || !blackPlayer) {
-      throw new PlayerNotFoundException();
+    if (gameWaitingPlayer) {
+      await this.gameRepository.save({
+        ...gameWaitingPlayer,
+        whitePlayerId: gameWaitingPlayer.whitePlayerId || player.id,
+        blackPlayerId: gameWaitingPlayer.blackPlayerId || player.id,
+      });
+
+      return gameWaitingPlayer;
     }
 
-    if (whitePlayerId === blackPlayerId) {
-      throw new GameAgainstYourselfException();
-    }
+    const newGame = this.gameRepository.create({
+      ...createGameDto,
+      whitePlayerId: player.id,
+    });
 
-    const game = this.gameRepository.create(createGameDto);
-    await this.gameRepository.save(game);
+    await this.gameRepository.save(newGame);
 
-    return game;
+    return newGame;
   }
 
   public async findAll() {

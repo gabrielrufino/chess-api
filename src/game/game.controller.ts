@@ -7,6 +7,7 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
@@ -14,6 +15,7 @@ import { CreateGameDto } from './dto/create-game.dto';
 import { GameService } from './game.service';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthUser } from 'src/auth/auth-user.interface';
 
 @ApiTags('Game')
 @ApiBearerAuth()
@@ -23,8 +25,9 @@ export class GameController {
   constructor(private readonly gameService: GameService) {}
 
   @Post()
-  public create(@Body() createGameDto: CreateGameDto) {
-    return this.gameService.create(createGameDto);
+  public create(@Request() request: any, @Body() createGameDto: CreateGameDto) {
+    const user = request.user as AuthUser;
+    return this.gameService.create(createGameDto, user);
   }
 
   @Get()

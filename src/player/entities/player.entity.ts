@@ -4,18 +4,25 @@ import {
   DeleteDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('players')
 export class PlayerEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ nullable: true })
-  userId: string | null;
+  @Column({ unique: true })
+  userId: string;
+
+  @Column()
+  isGuest: boolean;
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @DeleteDateColumn({ select: false })
   deletedAt: Date;
