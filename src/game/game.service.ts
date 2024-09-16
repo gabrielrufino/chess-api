@@ -63,7 +63,7 @@ export class GameService {
     };
   }
 
-  public async findOne(id: number) {
+  public async findOne(id: string) {
     return this.gameRepository.findOne({
       where: { id },
       relations: ['whitePlayer', 'blackPlayer'],

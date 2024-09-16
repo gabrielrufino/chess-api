@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  ParseIntPipe,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -36,7 +35,7 @@ export class GameController {
   }
 
   @Get(':id')
-  public findOne(@Param('id', ParseIntPipe) id: number) {
+  public findOne(@Param('id') id: string) {
     return this.gameService.findOne(id);
   }
 
