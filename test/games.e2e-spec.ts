@@ -10,6 +10,7 @@ import { PlayerEntity } from '../src/player/entities/player.entity';
 import { PlayerModule } from '../src/player/player.module';
 import { CreateGameDto } from 'src/game/dto/create-game.dto';
 import { createPlayer } from './helpers/create-player';
+import { GameDurationEnum } from 'src/game/enumerables/game-duration.enum';
 
 describe('GameModule (e2e)', () => {
   let app: INestApplication;
@@ -51,10 +52,7 @@ describe('GameModule (e2e)', () => {
       ]);
 
       const response = await client.post('/games').send({
-        startsAt: '2022-04-03 17:00:00',
-        endsAt: '2022-04-03 17:15:00',
-        whitePlayerId,
-        blackPlayerId,
+        duration: GameDurationEnum.OneMinute
       } as CreateGameDto);
 
       expect(response.status).toBe(HttpStatus.CREATED);
@@ -115,10 +113,7 @@ describe('GameModule (e2e)', () => {
       return request(app.getHttpServer())
         .post('/games')
         .send({
-          startsAt: '2022-04-03 17:00:00',
-          endsAt: '2022-04-03 17:15:00',
-          whitePlayerId,
-          blackPlayerId,
+          duration: GameDurationEnum.Unlimited
         } as CreateGameDto)
         .expect(HttpStatus.NOT_FOUND)
         .expect({
@@ -134,10 +129,7 @@ describe('GameModule (e2e)', () => {
       return request(app.getHttpServer())
         .post('/games')
         .send({
-          startsAt: '2022-04-03 17:00:00',
-          endsAt: '2022-04-03 17:15:00',
-          whitePlayerId,
-          blackPlayerId,
+          duration: GameDurationEnum.FiveMinutes
         } as CreateGameDto)
         .expect(HttpStatus.NOT_FOUND)
         .expect({
@@ -153,10 +145,7 @@ describe('GameModule (e2e)', () => {
       return request(app.getHttpServer())
         .post('/games')
         .send({
-          startsAt: '2022-04-03 17:00:00',
-          endsAt: '2022-04-03 17:15:00',
-          whitePlayerId,
-          blackPlayerId,
+          duration: GameDurationEnum.FiveMinutes
         } as CreateGameDto)
         .expect(HttpStatus.NOT_FOUND)
         .expect({
@@ -172,10 +161,7 @@ describe('GameModule (e2e)', () => {
       return request(app.getHttpServer())
         .post('/games')
         .send({
-          startsAt: '2022-04-03 17:00:00',
-          endsAt: '2022-04-03 17:15:00',
-          whitePlayerId,
-          blackPlayerId,
+          duration: GameDurationEnum.FiveMinutes
         } as CreateGameDto)
         .expect(HttpStatus.PRECONDITION_FAILED)
         .expect({

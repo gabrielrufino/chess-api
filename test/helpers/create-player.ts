@@ -11,7 +11,7 @@ export async function createPlayer(
     .post('/players')
     .send({
       name: faker.name.findName(),
-    } as CreatePlayerDto)
+    })
     .expect(HttpStatus.CREATED);
 
   return body;
