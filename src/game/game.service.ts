@@ -83,7 +83,8 @@ export class GameService {
       throw new NotFoundException('Game not found');
     }
 
-    const chess = new Chess(game.fen);
+    const chess = new Chess();
+    chess.load(game.fen);
     return {
       fen: chess.fen(),
       board: chess.board(),
@@ -96,7 +97,8 @@ export class GameService {
       throw new NotFoundException('Game not found');
     }
 
-    const chess = new Chess(game.fen);
+    const chess = new Chess();
+    chess.load(game.fen);
     return chess.moves();
   }
 
@@ -120,11 +122,15 @@ export class GameService {
     }
 
     const chess = new Chess();
-    if (game.fen) {
-      chess.load(game.fen);
-    }
-    if (game.pgn) {
-      chess.load_pgn(game.pgn);
+    // In chess.js v1, load() and loadPgn() throw on invalid input
+    try {
+      if (game.pgn) {
+        chess.loadPgn(game.pgn);
+      } else if (game.fen) {
+        chess.load(game.fen);
+      }
+    } catch {
+      throw new BadRequestException('Corrupted game state');
     }
 
     const turn = chess.turn(); // 'w' or 'b'
@@ -136,16 +142,19 @@ export class GameService {
       throw new ForbiddenException('Not your turn or you are not in this game');
     }
 
-    const moveResult = chess.move(createMoveDto.move);
-    if (!moveResult) {
+    // In chess.js v1, move() throws InvalidMoveError instead of returning null
+    let moveResult: ReturnType<typeof chess.move>;
+    try {
+      moveResult = chess.move(createMoveDto.move);
+    } catch {
       throw new BadRequestException('Invalid move');
     }
 
     game.fen = chess.fen();
     game.pgn = chess.pgn();
 
-    if (chess.game_over()) {
-      if (chess.in_checkmate()) {
+    if (chess.isGameOver()) {
+      if (chess.isCheckmate()) {
         game.status = GameStatusEnum.CHECKMATE;
       } else {
         game.status = GameStatusEnum.DRAW;
