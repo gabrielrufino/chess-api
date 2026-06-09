@@ -1,18 +1,19 @@
 import faker from '@faker-js/faker';
 import * as request from 'supertest';
-import { PlayerEntity } from 'src/player/entities/player.entity';
 import { CreatePlayerDto } from 'src/player/dto/create-player.dto';
 import { HttpStatus, INestApplication } from '@nestjs/common';
 
 export async function createPlayer(
   app: INestApplication,
-): Promise<PlayerEntity> {
+): Promise<any> {
+  const authUserId = faker.datatype.uuid();
   const { body } = await request(app.getHttpServer())
     .post('/players')
+    .set('x-user-id', authUserId)
     .send({
       name: faker.name.findName(),
     })
     .expect(HttpStatus.CREATED);
 
-  return body;
+  return { ...body, authUserId };
 }

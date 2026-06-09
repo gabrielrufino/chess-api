@@ -1,12 +1,13 @@
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
 import faker from '@faker-js/faker';
 import * as request from 'supertest';
 
-import { GameEntity } from '../src/game/entities/game.entity';
+import { AuthModule } from '../src/auth/auth.module';
+import { AuthGuard } from '../src/auth/auth.guard';
 import { GameModule } from '../src/game/game.module';
-import { PlayerEntity } from '../src/player/entities/player.entity';
 import { PlayerModule } from '../src/player/player.module';
 import { CreateGameDto } from 'src/game/dto/create-game.dto';
 import { createPlayer } from './helpers/create-player';
@@ -14,23 +15,32 @@ import { GameDurationEnum } from 'src/game/enumerables/game-duration.enum';
 
 describe('GameModule (e2e)', () => {
   let app: INestApplication;
-  let client: request.SuperTest<request.Request>;
+  let client: any;
+
+  let mongod: MongoMemoryServer;
 
   beforeEach(async () => {
+    mongod = await MongoMemoryServer.create();
+    const uri = mongod.getUri();
+
     const moduleRef = await Test.createTestingModule({
       imports: [
-        TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
-          dropSchema: true,
-          entities: [GameEntity, PlayerEntity],
-          synchronize: true,
-          logging: false,
-        }),
+        MongooseModule.forRoot(uri),
+        AuthModule,
         GameModule,
         PlayerModule,
       ],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({
+        canActivate: (context: any) => {
+          const req = context.switchToHttp().getRequest();
+          const userId = req.headers['x-user-id'] || faker.datatype.uuid();
+          req.user = { sub: userId, isGuest: true, username: 'test' };
+          return true;
+        },
+      })
+      .compile();
 
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
@@ -41,133 +51,76 @@ describe('GameModule (e2e)', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) await app.close();
+    if (mongod) {
+      await mongod.stop();
+    }
   });
 
   describe('POST /games', () => {
     it('Should create a new game when receive correct data', async () => {
-      const [{ id: whitePlayerId }, { id: blackPlayerId }] = await Promise.all([
-        createPlayer(app),
-        createPlayer(app),
-      ]);
+      const { authUserId } = await createPlayer(app);
 
-      const response = await client.post('/games').send({
-        duration: GameDurationEnum.OneMinute
-      } as CreateGameDto);
+      const response = await client.post('/games')
+        .set('x-user-id', authUserId)
+        .send({
+          duration: GameDurationEnum.OneMinute
+        } as CreateGameDto);
 
       expect(response.status).toBe(HttpStatus.CREATED);
+      expect(response.body.whitePlayerId).toBeDefined();
+      expect(response.body.blackPlayerId).toBeUndefined(); // or null based on schema, but not set yet
     });
 
-    it('Should return an error when does not receive the startsAt', async () => {
-      const [{ id: whitePlayerId }, { id: blackPlayerId }] = await Promise.all([
-        createPlayer(app),
-        createPlayer(app),
-      ]);
+    it('Should return a validation error when does not receive duration', async () => {
+      const { authUserId } = await createPlayer(app);
 
       return request(app.getHttpServer())
         .post('/games')
-        .send({
-          endsAt: '2022-04-03 17:15:00',
-          whitePlayerId,
-          blackPlayerId,
-        })
-        .expect(400)
-        .expect({
-          statusCode: 400,
-          message: [
-            'startsAt should not be null or undefined',
-            'startsAt must be a valid ISO 8601 date string',
-          ],
-          error: 'Bad Request',
-        });
+        .set('x-user-id', authUserId)
+        .send({})
+        .expect(400);
     });
 
-    it('Should return an error when does not receive the endsAt', async () => {
-      const [{ id: whitePlayerId }, { id: blackPlayerId }] = await Promise.all([
-        createPlayer(app),
-        createPlayer(app),
-      ]);
-
+    it('Should return an error when the player does not exist', async () => {
       return request(app.getHttpServer())
         .post('/games')
-        .send({
-          startsAt: '2022-04-03 17:00:00',
-          whitePlayerId,
-          blackPlayerId,
-        })
-        .expect(400)
-        .expect({
-          statusCode: 400,
-          message: [
-            'endsAt should not be null or undefined',
-            'endsAt must be a valid ISO 8601 date string',
-          ],
-          error: 'Bad Request',
-        });
-    });
-
-    it('Should return an not found error when the black player does not exists', async () => {
-      const { id: whitePlayerId } = await createPlayer(app);
-      const blackPlayerId = faker.datatype.number();
-
-      return request(app.getHttpServer())
-        .post('/games')
-        .send({
-          duration: GameDurationEnum.Unlimited
-        } as CreateGameDto)
-        .expect(HttpStatus.NOT_FOUND)
-        .expect({
-          statusCode: 404,
-          message: 'Player not found',
-        });
-    });
-
-    it('Should return an not found error when the white player does not exists', async () => {
-      const whitePlayerId = faker.datatype.number();
-      const { id: blackPlayerId } = await createPlayer(app);
-
-      return request(app.getHttpServer())
-        .post('/games')
+        .set('x-user-id', faker.datatype.uuid()) // invalid user
         .send({
           duration: GameDurationEnum.FiveMinutes
         } as CreateGameDto)
         .expect(HttpStatus.NOT_FOUND)
         .expect({
-          statusCode: 404,
           message: 'Player not found',
+          error: 'Not Found',
+          statusCode: 404,
         });
     });
 
-    it("Should return an not found error when both players don't exists", async () => {
-      const whitePlayerId = faker.datatype.number();
-      const blackPlayerId = faker.datatype.number();
+    it('Should join an existing waiting game', async () => {
+      const { authUserId: player1Id } = await createPlayer(app);
+      const { authUserId: player2Id } = await createPlayer(app);
 
-      return request(app.getHttpServer())
+      // Player 1 creates game
+      const res1 = await request(app.getHttpServer())
         .post('/games')
-        .send({
-          duration: GameDurationEnum.FiveMinutes
-        } as CreateGameDto)
-        .expect(HttpStatus.NOT_FOUND)
-        .expect({
-          statusCode: 404,
-          message: 'Player not found',
-        });
-    });
+        .set('x-user-id', player1Id)
+        .send({ duration: GameDurationEnum.FiveMinutes });
+      
+      expect(res1.status).toBe(HttpStatus.CREATED);
 
-    it('Should return an error when the white player and the black player are the same player', async () => {
-      const { id: whitePlayerId } = await createPlayer(app);
-      const blackPlayerId = whitePlayerId;
-
-      return request(app.getHttpServer())
+      // Player 2 joins game
+      const res2 = await request(app.getHttpServer())
         .post('/games')
-        .send({
-          duration: GameDurationEnum.FiveMinutes
-        } as CreateGameDto)
-        .expect(HttpStatus.PRECONDITION_FAILED)
-        .expect({
-          statusCode: 412,
-          message: "You can't play against yourself",
-        });
+        .set('x-user-id', player2Id)
+        .send({ duration: GameDurationEnum.FiveMinutes });
+      
+      expect(res2.status).toBe(HttpStatus.CREATED);
+      
+      // Should be the same game ID
+      expect(res2.body._id).toBe(res1.body._id);
+      expect(res2.body.whitePlayerId).toBeDefined();
+      expect(res2.body.blackPlayerId).toBeDefined();
     });
   });
 
@@ -175,6 +128,7 @@ describe('GameModule (e2e)', () => {
     it('Should list all the games', () => {
       return request(app.getHttpServer())
         .get('/games')
+        .set('x-user-id', faker.datatype.uuid())
         .expect(200)
         .expect({ data: [], total: 0 });
     });

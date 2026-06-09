@@ -2,32 +2,31 @@ import { Injectable } from '@nestjs/common';
 
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
-import { Repository } from 'typeorm';
-import { PlayerEntity } from './entities/player.entity';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Player, PlayerDocument } from './schemas/player.schema';
 import { AuthUser } from 'src/auth/auth-user.interface';
 
 @Injectable()
 export class PlayerService {
   constructor(
-    @InjectRepository(PlayerEntity)
-    private readonly playerRepository: Repository<PlayerEntity>,
+    @InjectModel(Player.name)
+    private readonly playerModel: Model<PlayerDocument>,
   ) {}
 
   public async create(createPlayerDto: CreatePlayerDto, authUser: AuthUser) {
-    const player = this.playerRepository.create({
+    const player = await this.playerModel.create({
       ...createPlayerDto,
       userId: authUser.sub,
       isGuest: authUser.isGuest,
     });
 
-    await this.playerRepository.save(player);
-
     return player;
   }
 
   public async findAll() {
-    const [players, total] = await this.playerRepository.findAndCount();
+    const total = await this.playerModel.countDocuments();
+    const players = await this.playerModel.find();
 
     return {
       data: players,
@@ -36,7 +35,7 @@ export class PlayerService {
   }
 
   public async findOne(id: string) {
-    return this.playerRepository.findOneBy({ id });
+    return this.playerModel.findById(id);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -45,6 +44,6 @@ export class PlayerService {
   }
 
   public async remove(id: string) {
-    return this.playerRepository.softDelete(id);
+    return this.playerModel.findByIdAndUpdate(id, { deletedAt: new Date() }, { new: true });
   }
 }

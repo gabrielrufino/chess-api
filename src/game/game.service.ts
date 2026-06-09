@@ -1,61 +1,62 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
-import { IsNull, Repository } from 'typeorm';
-import { PlayerEntity } from 'src/player/entities/player.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { GameEntity } from './entities/game.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Player, PlayerDocument } from 'src/player/schemas/player.schema';
+import { Game, GameDocument } from './schemas/game.schema';
 import { AuthUser } from 'src/auth/auth-user.interface';
 
 @Injectable()
 export class GameService {
   constructor(
-    @InjectRepository(GameEntity)
-    private readonly gameRepository: Repository<GameEntity>,
-    @InjectRepository(PlayerEntity)
-    private readonly playerRepository: Repository<PlayerEntity>,
+    @InjectModel(Game.name)
+    private readonly gameModel: Model<GameDocument>,
+    @InjectModel(Player.name)
+    private readonly playerModel: Model<PlayerDocument>,
   ) {}
 
   public async create(createGameDto: CreateGameDto, authUser: AuthUser) {
-    const player = await this.playerRepository.findOneByOrFail({
+    const player = await this.playerModel.findOne({
       userId: authUser.sub,
     });
 
-    const gameWaitingPlayer = await this.gameRepository
-      .createQueryBuilder('game')
-      .where([{ whitePlayerId: IsNull() }, { blackPlayerId: IsNull() }])
-      .andWhere(
-        "COALESCE(game.whitePlayerId, '') != :playerId AND COALESCE(game.blackPlayerId, '') != :playerId",
-        { playerId: player.id },
-      )
-      .andWhere({ duration: createGameDto.duration })
-      .getOne();
+    if (!player) {
+      throw new NotFoundException('Player not found');
+    }
+
+    const gameWaitingPlayer = await this.gameModel.findOne({
+      $or: [
+        { whitePlayerId: { $exists: false } },
+        { blackPlayerId: { $exists: false } },
+        { whitePlayerId: null },
+        { blackPlayerId: null },
+      ],
+      whitePlayerId: { $ne: player._id },
+      blackPlayerId: { $ne: player._id },
+      duration: createGameDto.duration,
+    } as any);
 
     if (gameWaitingPlayer) {
-      await this.gameRepository.save({
-        ...gameWaitingPlayer,
-        whitePlayerId: gameWaitingPlayer.whitePlayerId || player.id,
-        blackPlayerId: gameWaitingPlayer.blackPlayerId || player.id,
-      });
+      gameWaitingPlayer.whitePlayerId = gameWaitingPlayer.whitePlayerId || player._id as any;
+      gameWaitingPlayer.blackPlayerId = gameWaitingPlayer.blackPlayerId || player._id as any;
+      await gameWaitingPlayer.save();
 
       return gameWaitingPlayer;
     }
 
-    const newGame = this.gameRepository.create({
+    const newGame = await this.gameModel.create({
       ...createGameDto,
-      whitePlayerId: player.id,
+      whitePlayerId: player._id,
     });
-
-    await this.gameRepository.save(newGame);
 
     return newGame;
   }
 
   public async findAll() {
-    const [data, total] = await this.gameRepository.findAndCount({
-      relations: ['whitePlayer', 'blackPlayer'],
-    });
+    const total = await this.gameModel.countDocuments();
+    const data = await this.gameModel.find().populate('whitePlayer').populate('blackPlayer');
 
     return {
       data,
@@ -64,10 +65,7 @@ export class GameService {
   }
 
   public async findOne(id: string) {
-    return this.gameRepository.findOne({
-      where: { id },
-      relations: ['whitePlayer', 'blackPlayer'],
-    });
+    return this.gameModel.findById(id).populate('whitePlayer').populate('blackPlayer');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
