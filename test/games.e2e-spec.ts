@@ -133,4 +133,75 @@ describe('GameModule (e2e)', () => {
         .expect({ data: [], total: 0 });
     });
   });
+
+  describe('Play Game', () => {
+    it('Should play a full game of chess until checkmate', async () => {
+      const { authUserId: player1Id } = await createPlayer(app);
+      const { authUserId: player2Id } = await createPlayer(app);
+
+      // Player 1 creates game
+      const res1 = await request(app.getHttpServer())
+        .post('/games')
+        .set('x-user-id', player1Id)
+        .send({ duration: GameDurationEnum.FiveMinutes });
+      const gameId = res1.body._id;
+
+      // Player 2 joins game
+      await request(app.getHttpServer())
+        .post('/games')
+        .set('x-user-id', player2Id)
+        .send({ duration: GameDurationEnum.FiveMinutes });
+
+      // Get board
+      const boardRes = await request(app.getHttpServer())
+        .get(`/games/${gameId}/board`)
+        .set('x-user-id', player1Id)
+        .expect(200);
+      expect(boardRes.body.fen).toBeDefined();
+      expect(boardRes.body.board).toBeDefined();
+
+      // Scholar's Mate Sequence
+      const moves = [
+        { player: player1Id, move: 'e4' },
+        { player: player2Id, move: 'e5' },
+        { player: player1Id, move: 'Bc4' },
+        { player: player2Id, move: 'Nc6' },
+        { player: player1Id, move: 'Qh5' },
+        { player: player2Id, move: 'Nf6' },
+        { player: player1Id, move: 'Qxf7#' },
+      ];
+
+      for (const m of moves) {
+        // List moves before
+        const movesRes = await request(app.getHttpServer())
+          .get(`/games/${gameId}/moves`)
+          .set('x-user-id', m.player)
+          .expect(200);
+        expect(Array.isArray(movesRes.body)).toBeTruthy();
+        expect(movesRes.body).toContain(m.move);
+
+        // Make move
+        const moveRes = await request(app.getHttpServer())
+          .post(`/games/${gameId}/moves`)
+          .set('x-user-id', m.player)
+          .send({ move: m.move })
+          .expect(201); // Created status
+      }
+
+      // Game should be Checkmate now
+      const gameAfter = await request(app.getHttpServer())
+        .get(`/games/${gameId}`)
+        .set('x-user-id', player1Id)
+        .expect(200);
+
+      expect(gameAfter.body.status).toBe('CHECKMATE');
+
+      // Attempting to play after checkmate should fail
+      await request(app.getHttpServer())
+        .post(`/games/${gameId}/moves`)
+        .set('x-user-id', player2Id)
+        .send({ move: 'd6' })
+        .expect(400); // Bad Request
+    });
+  });
 });

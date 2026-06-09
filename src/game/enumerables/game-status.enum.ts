@@ -1,0 +1,6 @@
+export enum GameStatusEnum {
+  WAITING_PLAYER = 'WAITING_PLAYER',
+  IN_PROGRESS = 'IN_PROGRESS',
+  CHECKMATE = 'CHECKMATE',
+  DRAW = 'DRAW',
+}

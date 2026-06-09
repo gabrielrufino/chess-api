@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CreateGameDto } from './dto/create-game.dto';
+import { CreateMoveDto } from './dto/create-move.dto';
 import { GameService } from './game.service';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
@@ -42,5 +43,25 @@ export class GameController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateGameDto: UpdateGameDto) {
     return this.gameService.update(+id, updateGameDto);
+  }
+
+  @Get(':id/board')
+  public getBoard(@Param('id') id: string) {
+    return this.gameService.getBoard(id);
+  }
+
+  @Get(':id/moves')
+  public getMoves(@Param('id') id: string) {
+    return this.gameService.getMoves(id);
+  }
+
+  @Post(':id/moves')
+  public makeMove(
+    @Request() request: any,
+    @Param('id') id: string,
+    @Body() createMoveDto: CreateMoveDto,
+  ) {
+    const user = request.user as AuthUser;
+    return this.gameService.makeMove(id, createMoveDto, user);
   }
 }

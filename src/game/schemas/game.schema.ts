@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
+import { GameStatusEnum } from '../enumerables/game-status.enum';
 import { Player } from 'src/player/schemas/player.schema';
 
 export type GameDocument = HydratedDocument<Game>;
@@ -15,6 +16,15 @@ export class Game {
 
   @Prop({ required: true, enum: GameDurationEnum })
   duration: GameDurationEnum;
+
+  @Prop({ default: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' })
+  fen: string;
+
+  @Prop({ default: '' })
+  pgn: string;
+
+  @Prop({ default: GameStatusEnum.WAITING_PLAYER, enum: GameStatusEnum })
+  status: GameStatusEnum;
 }
 
 export const GameSchema = SchemaFactory.createForClass(Game);

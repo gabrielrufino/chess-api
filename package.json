@@ -87,6 +87,9 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(chess\\.js)/)"
+    ],
     "moduleNameMapper": {
       "src/(.*)": "<rootDir>/src/../$1"
     }
