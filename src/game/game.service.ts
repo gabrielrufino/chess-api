@@ -34,26 +34,22 @@ export class GameService {
       throw new NotFoundException('Player not found');
     }
 
-    const gameWaitingPlayer = await this.gameModel.findOne({
-      $or: [
-        { whitePlayerId: { $exists: false } },
-        { blackPlayerId: { $exists: false } },
-        { whitePlayerId: null },
-        { blackPlayerId: null },
-      ],
-      whitePlayerId: { $ne: player._id },
-      blackPlayerId: { $ne: player._id },
-      duration: createGameDto.duration,
-    });
+    const gameWaitingPlayer = await this.gameModel.findOneAndUpdate(
+      {
+        blackPlayerId: null,
+        whitePlayerId: { $ne: player._id },
+        duration: createGameDto.duration,
+      },
+      {
+        $set: {
+          blackPlayerId: player._id,
+          status: GameStatusEnum.IN_PROGRESS,
+        },
+      },
+      { returnDocument: 'after' },
+    );
 
     if (gameWaitingPlayer) {
-      gameWaitingPlayer.whitePlayerId =
-        gameWaitingPlayer.whitePlayerId || player._id;
-      gameWaitingPlayer.blackPlayerId =
-        gameWaitingPlayer.blackPlayerId || player._id;
-      gameWaitingPlayer.status = GameStatusEnum.IN_PROGRESS;
-      await gameWaitingPlayer.save();
-
       return gameWaitingPlayer;
     }
 
