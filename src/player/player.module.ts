@@ -1,14 +1,16 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 
 import { PlayerController } from './player.controller';
 import { PlayerService } from './player.service';
-import { PlayerRepository } from './repositories/player.repository';
+import { Player, PlayerSchema } from './schemas/player.schema';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([PlayerRepository])],
+  imports: [
+    MongooseModule.forFeature([{ name: Player.name, schema: PlayerSchema }]),
+  ],
   controllers: [PlayerController],
   providers: [PlayerService],
-  exports: [TypeOrmModule],
+  exports: [MongooseModule],
 })
 export class PlayerModule {}

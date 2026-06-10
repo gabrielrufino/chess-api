@@ -1,4 +1,4 @@
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -7,21 +7,30 @@ import {
   Patch,
   Param,
   Delete,
-  ParseIntPipe,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { PlayerService } from './player.service';
 import { UpdatePlayerDto } from './dto/update-player.dto';
+import { AuthRequest } from 'src/auth/auth-user.interface';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @ApiTags('Player')
+@ApiBearerAuth()
+@UseGuards(AuthGuard)
 @Controller('players')
 export class PlayerController {
   constructor(private readonly playerService: PlayerService) {}
 
   @Post()
-  public create(@Body() createPlayerDto: CreatePlayerDto) {
-    return this.playerService.create(createPlayerDto);
+  public create(
+    @Request() request: AuthRequest,
+    @Body() createPlayerDto: CreatePlayerDto,
+  ) {
+    const user = request.user;
+    return this.playerService.create(createPlayerDto, user);
   }
 
   @Get()
@@ -30,20 +39,21 @@ export class PlayerController {
   }
 
   @Get(':id')
-  public findOne(@Param('id', ParseIntPipe) id: number) {
+  public findOne(@Param('id') id: string) {
     return this.playerService.findOne(id);
   }
 
   @Patch(':id')
   public update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Body() updatePlayerDto: UpdatePlayerDto,
   ) {
-    return this.playerService.update(id, updatePlayerDto);
+    return this.playerService.update(id);
   }
 
   @Delete(':id')
-  public remove(@Param('id', ParseIntPipe) id: number) {
+  public remove(@Param('id') id: string) {
     return this.playerService.remove(id);
   }
 }

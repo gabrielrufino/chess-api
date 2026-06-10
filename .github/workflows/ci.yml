@@ -1,51 +1,21 @@
-name: Package CI
+name: CI
 
 on:
-  - push
   - pull_request
+  - workflow_dispatch
 
 jobs:
-  unit-tests:
-    name: Unit tests
-    strategy:
-      matrix:
-        node-version: [14.x, 16.x]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm ci
-    - run: npm test
-  e2e-tests:
-    name: End2End Tests
-    strategy:
-      matrix:
-        node-version: [14.x, 16.x]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-
-    steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm ci
-    - run: npm run test:e2e
-  lint:
-    name: Linting check
+  node-ci:
+    name: Node CI
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js 16
-      uses: actions/setup-node@v1
-      with:
-        node-version: 16
-    - run: npm ci
-    - run: npm run lint:check
+      - uses: actions/checkout@v4
+      - uses: actalog/node-ci@v3
+  dockerfile-ci:
+    name: Dockerfile CI
+    needs:
+      - node-ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actalog/dockerfile-ci@v2

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Chess API interactive demo — play chess against another browser tab via the Chess API." />
+  <title>Chess API — Demo</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- jQuery (required by chessboard.js) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <!-- chessboard.js — must remain a classic script (uses global Chessboard) -->
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css" />
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- App (ESM module — chess.js v1 is imported inside app.js) -->
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+
+  <header>
+    <h1>♟ Chess API</h1>
+    <p>Real-time chess powered by the Chess API</p>
+  </header>
+
+  <!-- ───── Setup screen ───── -->
+  <div id="setup-screen" class="card">
+    <div class="field">
+      <label for="guest-name">Your name</label>
+      <input id="guest-name" type="text" placeholder="Guest-..." autocomplete="off" />
+    </div>
+    <div class="field">
+      <label for="duration">Game duration</label>
+      <select id="duration">
+        <option value="unlimited">Unlimited</option>
+        <option value="1min">1 minute</option>
+        <option value="5min" selected>5 minutes</option>
+        <option value="10min">10 minutes</option>
+      </select>
+    </div>
+    <button id="join-btn" class="btn btn-primary">Enter game</button>
+    <div id="setup-error" style="margin-top:14px;color:var(--red);font-size:0.85rem;text-align:center;display:none;"></div>
+  </div>
+
+  <!-- ───── Game screen ───── -->
+  <div id="game-screen">
+    <div class="game-layout">
+
+      <!-- Board column -->
+      <div class="board-col">
+        <div class="player-info">
+          <div class="player-badge">
+            <span class="color-dot" id="my-color-dot"></span>
+            <span id="my-name-label">—</span>
+          </div>
+          <span id="turn-indicator" style="font-size:0.82rem;color:var(--text-muted);"></span>
+        </div>
+        <div id="board-container">
+          <div id="board"></div>
+        </div>
+      </div>
+
+      <!-- Side panel -->
+      <div class="side-col">
+        <div id="status-bar">
+          <span class="spinner"></span>
+          <span id="status-text">Connecting…</span>
+        </div>
+
+        <div class="side-card">
+          <h3>Move history</h3>
+          <div id="moves-log"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    Powered by <a href="https://chessboardjs.com/" target="_blank">chessboard.js</a>
+    &amp; <a href="https://github.com/jhlywa/chess.js" target="_blank">chess.js</a>
+  </footer>
+
+</body>
+</html>
