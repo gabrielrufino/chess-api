@@ -12,7 +12,7 @@ export class PlayerService {
   constructor(
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>,
-  ) {}
+  ) { }
 
   public async create(createPlayerDto: CreatePlayerDto, authUser: AuthUser) {
     const player = await this.playerModel.create({
@@ -25,8 +25,10 @@ export class PlayerService {
   }
 
   public async findAll() {
-    const total = await this.playerModel.countDocuments();
-    const players = await this.playerModel.find();
+    const [total, players] = await Promise.all([
+      this.playerModel.countDocuments({ deletedAt: null }),
+      this.playerModel.find({ deletedAt: null }),
+    ]);
 
     return {
       data: players,

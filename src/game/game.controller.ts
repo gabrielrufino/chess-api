@@ -45,7 +45,7 @@ export class GameController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateGameDto: UpdateGameDto) {
-    return this.gameService.update(+id, updateGameDto);
+    return this.gameService.update(id, updateGameDto);
   }
 
   @Get(':id/board')

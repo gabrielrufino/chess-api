@@ -82,7 +82,7 @@ export class GameService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  update(id: number, updateGameDto: UpdateGameDto) {
+  update(id: string, updateGameDto: UpdateGameDto) {
     return `This action updates a #${id} game`;
   }
 
@@ -93,7 +93,11 @@ export class GameService {
     }
 
     const chess = new Chess();
-    chess.load(game.fen);
+    try {
+      chess.load(game.fen);
+    } catch {
+      throw new BadRequestException('Invalid or corrupted game FEN');
+    }
     return {
       fen: chess.fen(),
       board: chess.board(),
@@ -107,7 +111,11 @@ export class GameService {
     }
 
     const chess = new Chess();
-    chess.load(game.fen);
+    try {
+      chess.load(game.fen);
+    } catch {
+      throw new BadRequestException('Invalid or corrupted game FEN');
+    }
     return chess.moves();
   }
 
