@@ -1,8 +1,8 @@
 {
-  "name": "@servicespack/chess-api",
+  "name": "@gabrielrufino/chess-api",
   "version": "0.0.1",
   "description": "Free API for Chess",
-  "author": "ServicesPack (https://github.com/servicespack)",
+  "author": "Gabriel Rufino (https://gabrielrufino.com)",
   "private": true,
   "license": "MIT",
   "scripts": {

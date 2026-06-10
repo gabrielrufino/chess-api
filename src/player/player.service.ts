@@ -12,7 +12,7 @@ export class PlayerService {
   constructor(
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>,
-  ) { }
+  ) {}
 
   public async create(createPlayerDto: CreatePlayerDto, authUser: AuthUser) {
     const player = await this.playerModel.create({
