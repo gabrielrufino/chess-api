@@ -9,13 +9,13 @@ import { AuthModule } from '../src/auth/auth.module';
 import { AuthGuard } from '../src/auth/auth.guard';
 import { GameModule } from '../src/game/game.module';
 import { PlayerModule } from '../src/player/player.module';
-import { CreateGameDto } from 'src/game/dto/create-game.dto';
 import { createPlayer } from './helpers/create-player';
 import { GameDurationEnum } from 'src/game/enumerables/game-duration.enum';
+import TestAgent from 'supertest/lib/agent';
 
 describe('GameModule (e2e)', () => {
   let app: INestApplication;
-  let client: any;
+  let client: TestAgent;
 
   let mongod: MongoMemoryServer;
 
@@ -34,8 +34,11 @@ describe('GameModule (e2e)', () => {
       .overrideGuard(AuthGuard)
       .useValue({
         canActivate: (context: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           const req = context.switchToHttp().getRequest();
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           const userId = req.headers['x-user-id'] || faker.datatype.uuid();
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
           req.user = { sub: userId, isGuest: true, username: 'test' };
           return true;
         },
@@ -47,6 +50,7 @@ describe('GameModule (e2e)', () => {
 
     await app.init();
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     client = request(app.getHttpServer());
   });
 
@@ -59,20 +63,25 @@ describe('GameModule (e2e)', () => {
 
   describe('POST /games', () => {
     it('Should create a new game when receive correct data', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId } = await createPlayer(app);
 
-      const response = await client.post('/games')
+      const response = await client
+        .post('/games')
         .set('x-user-id', authUserId)
         .send({
-          duration: GameDurationEnum.OneMinute
-        } as CreateGameDto);
+          duration: GameDurationEnum.OneMinute,
+        });
 
       expect(response.status).toBe(HttpStatus.CREATED);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(response.body.whitePlayerId).toBeDefined();
-      expect(response.body.blackPlayerId).toBeUndefined(); // or null based on schema, but not set yet
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(response.body.blackPlayerId).toBeUndefined();
     });
 
     it('Should return a validation error when does not receive duration', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId } = await createPlayer(app);
 
       return request(app.getHttpServer())
@@ -83,12 +92,13 @@ describe('GameModule (e2e)', () => {
     });
 
     it('Should return an error when the player does not exist', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       return request(app.getHttpServer())
         .post('/games')
         .set('x-user-id', faker.datatype.uuid()) // invalid user
         .send({
-          duration: GameDurationEnum.FiveMinutes
-        } as CreateGameDto)
+          duration: GameDurationEnum.FiveMinutes,
+        })
         .expect(HttpStatus.NOT_FOUND)
         .expect({
           message: 'Player not found',
@@ -98,7 +108,9 @@ describe('GameModule (e2e)', () => {
     });
 
     it('Should join an existing waiting game', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId: player1Id } = await createPlayer(app);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId: player2Id } = await createPlayer(app);
 
       // Player 1 creates game
@@ -106,20 +118,23 @@ describe('GameModule (e2e)', () => {
         .post('/games')
         .set('x-user-id', player1Id)
         .send({ duration: GameDurationEnum.FiveMinutes });
-      
+
       expect(res1.status).toBe(HttpStatus.CREATED);
 
-      // Player 2 joins game
+      // Player 2 joins gam
       const res2 = await request(app.getHttpServer())
         .post('/games')
         .set('x-user-id', player2Id)
         .send({ duration: GameDurationEnum.FiveMinutes });
-      
+
       expect(res2.status).toBe(HttpStatus.CREATED);
-      
+
       // Should be the same game ID
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res2.body._id).toBe(res1.body._id);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res2.body.whitePlayerId).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res2.body.blackPlayerId).toBeDefined();
     });
   });
@@ -136,7 +151,9 @@ describe('GameModule (e2e)', () => {
 
   describe('Play Game', () => {
     it('Should play a full game of chess until checkmate', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId: player1Id } = await createPlayer(app);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId: player2Id } = await createPlayer(app);
 
       // Player 1 creates game
@@ -144,6 +161,8 @@ describe('GameModule (e2e)', () => {
         .post('/games')
         .set('x-user-id', player1Id)
         .send({ duration: GameDurationEnum.FiveMinutes });
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const gameId = res1.body._id;
 
       // Player 2 joins game
@@ -157,17 +176,26 @@ describe('GameModule (e2e)', () => {
         .get(`/games/${gameId}/board`)
         .set('x-user-id', player1Id)
         .expect(200);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(boardRes.body.fen).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(boardRes.body.board).toBeDefined();
 
       // Scholar's Mate Sequence
       const moves = [
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { player: player1Id, move: 'e4' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { player: player2Id, move: 'e5' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { player: player1Id, move: 'Bc4' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { player: player2Id, move: 'Nc6' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { player: player1Id, move: 'Qh5' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { player: player2Id, move: 'Nf6' },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { player: player1Id, move: 'Qxf7#' },
       ];
 
@@ -181,7 +209,7 @@ describe('GameModule (e2e)', () => {
         expect(movesRes.body).toContain(m.move);
 
         // Make move
-        const moveRes = await request(app.getHttpServer())
+        await request(app.getHttpServer())
           .post(`/games/${gameId}/moves`)
           .set('x-user-id', m.player)
           .send({ move: m.move })
@@ -194,6 +222,7 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', player1Id)
         .expect(200);
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(gameAfter.body.status).toBe('CHECKMATE');
 
       // Attempting to play after checkmate should fail

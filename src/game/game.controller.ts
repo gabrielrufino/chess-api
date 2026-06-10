@@ -15,7 +15,7 @@ import { CreateMoveDto } from './dto/create-move.dto';
 import { GameService } from './game.service';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
-import { AuthUser } from 'src/auth/auth-user.interface';
+import { AuthRequest } from 'src/auth/auth-user.interface';
 
 @ApiTags('Game')
 @ApiBearerAuth()
@@ -25,8 +25,11 @@ export class GameController {
   constructor(private readonly gameService: GameService) {}
 
   @Post()
-  public create(@Request() request: any, @Body() createGameDto: CreateGameDto) {
-    const user = request.user as AuthUser;
+  public create(
+    @Request() request: AuthRequest,
+    @Body() createGameDto: CreateGameDto,
+  ) {
+    const user = request.user;
     return this.gameService.create(createGameDto, user);
   }
 
@@ -57,11 +60,11 @@ export class GameController {
 
   @Post(':id/moves')
   public makeMove(
-    @Request() request: any,
+    @Request() request: AuthRequest,
     @Param('id') id: string,
     @Body() createMoveDto: CreateMoveDto,
   ) {
-    const user = request.user as AuthUser;
+    const user = request.user;
     return this.gameService.makeMove(id, createMoveDto, user);
   }
 }

@@ -1,12 +1,10 @@
 import faker from '@faker-js/faker';
 import * as request from 'supertest';
-import { CreatePlayerDto } from 'src/player/dto/create-player.dto';
 import { HttpStatus, INestApplication } from '@nestjs/common';
 
-export async function createPlayer(
-  app: INestApplication,
-): Promise<any> {
+export async function createPlayer(app: INestApplication): Promise<any> {
   const authUserId = faker.datatype.uuid();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument
   const { body } = await request(app.getHttpServer())
     .post('/players')
     .set('x-user-id', authUserId)

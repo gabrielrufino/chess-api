@@ -39,8 +39,9 @@ describe(PlayerService.name, () => {
 
     jest.spyOn(repository, 'create').mockResolvedValue(createPlayerDto as any);
 
-    const result = await service.create(createPlayerDto as any, authUser as any);
+    const result = await service.create(createPlayerDto, authUser as any);
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repository.create).toHaveBeenCalledWith({
       ...createPlayerDto,
       userId: authUser.sub,
@@ -56,32 +57,43 @@ describe(PlayerService.name, () => {
 
     const result = await service.findAll();
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repository.countDocuments).toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repository.find).toHaveBeenCalled();
     expect(result).toEqual({ data: players, total: 1 });
   });
 
   it('should find one player', async () => {
     const player = { id: '1', nickname: 'test' };
-    jest.spyOn(repository, 'findById').mockResolvedValue(player as any);
+    jest.spyOn(repository, 'findById').mockResolvedValue(player);
 
     const result = await service.findOne('1');
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repository.findById).toHaveBeenCalledWith('1');
     expect(result).toEqual(player);
   });
 
-  it('should update a player', async () => {
-    const result = await service.update('1', { nickname: 'new-test' } as any);
+  it('should update a player', () => {
+    const result = service.update('1');
     expect(result).toBe('This action updates a #1 player');
   });
 
   it('should remove a player', async () => {
-    jest.spyOn(repository, 'findByIdAndUpdate').mockResolvedValue({ id: '1', deletedAt: new Date() } as any);
+    jest
+      .spyOn(repository, 'findByIdAndUpdate')
+      .mockResolvedValue({ id: '1', deletedAt: new Date() });
 
     const result = await service.remove('1');
 
-    expect(repository.findByIdAndUpdate).toHaveBeenCalledWith('1', expect.any(Object), { new: true });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(
+      '1',
+      expect.any(Object),
+      { new: true },
+    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     expect(result).toEqual({ id: '1', deletedAt: expect.any(Date) });
   });
 });

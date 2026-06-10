@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 
 import { CreateGameDto } from './dto/create-game.dto';
 import { CreateMoveDto } from './dto/create-move.dto';
@@ -39,11 +44,13 @@ export class GameService {
       whitePlayerId: { $ne: player._id },
       blackPlayerId: { $ne: player._id },
       duration: createGameDto.duration,
-    } as any);
+    });
 
     if (gameWaitingPlayer) {
-      gameWaitingPlayer.whitePlayerId = gameWaitingPlayer.whitePlayerId || player._id as any;
-      gameWaitingPlayer.blackPlayerId = gameWaitingPlayer.blackPlayerId || player._id as any;
+      gameWaitingPlayer.whitePlayerId =
+        gameWaitingPlayer.whitePlayerId || player._id;
+      gameWaitingPlayer.blackPlayerId =
+        gameWaitingPlayer.blackPlayerId || player._id;
       gameWaitingPlayer.status = GameStatusEnum.IN_PROGRESS;
       await gameWaitingPlayer.save();
 
@@ -60,7 +67,10 @@ export class GameService {
 
   public async findAll() {
     const total = await this.gameModel.countDocuments();
-    const data = await this.gameModel.find().populate('whitePlayer').populate('blackPlayer');
+    const data = await this.gameModel
+      .find()
+      .populate('whitePlayer')
+      .populate('blackPlayer');
 
     return {
       data,
@@ -69,7 +79,10 @@ export class GameService {
   }
 
   public async findOne(id: string) {
-    return this.gameModel.findById(id).populate('whitePlayer').populate('blackPlayer');
+    return this.gameModel
+      .findById(id)
+      .populate('whitePlayer')
+      .populate('blackPlayer');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -102,7 +115,11 @@ export class GameService {
     return chess.moves();
   }
 
-  public async makeMove(id: string, createMoveDto: CreateMoveDto, authUser: AuthUser) {
+  public async makeMove(
+    id: string,
+    createMoveDto: CreateMoveDto,
+    authUser: AuthUser,
+  ) {
     const game = await this.gameModel.findById(id);
     if (!game) {
       throw new NotFoundException('Game not found');
@@ -136,16 +153,17 @@ export class GameService {
     const turn = chess.turn(); // 'w' or 'b'
     const isWhiteTurn = turn === 'w';
 
-    const currentPlayerId = isWhiteTurn ? game.whitePlayerId.toString() : game.blackPlayerId.toString();
+    const currentPlayerId = isWhiteTurn
+      ? game.whitePlayerId.toString()
+      : game.blackPlayerId.toString();
 
     if (player._id.toString() !== currentPlayerId) {
       throw new ForbiddenException('Not your turn or you are not in this game');
     }
 
     // In chess.js v1, move() throws InvalidMoveError instead of returning null
-    let moveResult: ReturnType<typeof chess.move>;
     try {
-      moveResult = chess.move(createMoveDto.move);
+      chess.move(createMoveDto.move);
     } catch {
       throw new BadRequestException('Invalid move');
     }

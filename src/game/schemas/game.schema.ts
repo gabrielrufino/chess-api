@@ -2,7 +2,6 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { GameStatusEnum } from '../enumerables/game-status.enum';
-import { Player } from 'src/player/schemas/player.schema';
 
 export type GameDocument = HydratedDocument<Game>;
 

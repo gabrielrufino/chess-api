@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { CreatePlayerDto } from './dto/create-player.dto';
-import { UpdatePlayerDto } from './dto/update-player.dto';
+
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Player, PlayerDocument } from './schemas/player.schema';
@@ -38,12 +38,15 @@ export class PlayerService {
     return this.playerModel.findById(id);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async update(id: string, updatePlayerDto: UpdatePlayerDto) {
+  public update(id: string) {
     return `This action updates a #${id} player`;
   }
 
   public async remove(id: string) {
-    return this.playerModel.findByIdAndUpdate(id, { deletedAt: new Date() }, { new: true });
+    return this.playerModel.findByIdAndUpdate(
+      id,
+      { deletedAt: new Date() },
+      { new: true },
+    );
   }
 }

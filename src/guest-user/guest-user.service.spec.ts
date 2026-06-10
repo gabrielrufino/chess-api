@@ -37,6 +37,7 @@ describe(GuestUserService.name, () => {
 
     const result = await service.createGuestUser(createGuestUserDto);
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(authService.createGuestToken).toHaveBeenCalledWith({
       id: 'mock-uuid',
       name: 'Guest',

@@ -3,7 +3,6 @@ import { PlayerController } from './player.controller';
 import { PlayerService } from './player.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { JwtService } from '@nestjs/jwt';
-import { ExecutionContext } from '@nestjs/common';
 
 describe(PlayerController.name, () => {
   let controller: PlayerController;
@@ -31,7 +30,7 @@ describe(PlayerController.name, () => {
     })
       .overrideGuard(AuthGuard)
       .useValue({
-        canActivate: (context: ExecutionContext) => true,
+        canActivate: () => true,
       })
       .compile();
 
@@ -45,11 +44,14 @@ describe(PlayerController.name, () => {
 
   it('should create a player', async () => {
     const createPlayerDto = { nickname: 'test' };
-    const request = { user: { sub: 'user-id', isGuest: true, username: 'test' } };
+    const request = {
+      user: { sub: 'user-id', isGuest: true, username: 'test' },
+    };
     jest.spyOn(service, 'create').mockResolvedValue(createPlayerDto as any);
 
-    const result = await controller.create(request, createPlayerDto as any);
+    const result = await controller.create(request as any, createPlayerDto);
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.create).toHaveBeenCalledWith(createPlayerDto, request.user);
     expect(result).toEqual(createPlayerDto);
   });
@@ -60,6 +62,7 @@ describe(PlayerController.name, () => {
 
     const result = await controller.findAll();
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.findAll).toHaveBeenCalled();
     expect(result).toEqual(players);
   });
@@ -70,16 +73,22 @@ describe(PlayerController.name, () => {
 
     const result = await controller.findOne('1');
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.findOne).toHaveBeenCalledWith('1');
     expect(result).toEqual(player);
   });
 
-  it('should update a player', async () => {
-    jest.spyOn(service, 'update').mockResolvedValue('This action updates a #1 player' as any);
+  it('should update a player', () => {
+    jest
+      .spyOn(service, 'update')
+      .mockReturnValue('This action updates a #1 player');
 
-    const result = await controller.update('1', { nickname: 'new-test' } as any);
+    const result = controller.update('1', {
+      nickname: 'new-test',
+    });
 
-    expect(service.update).toHaveBeenCalledWith('1', { nickname: 'new-test' });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(service.update).toHaveBeenCalledWith('1');
     expect(result).toEqual('This action updates a #1 player');
   });
 
@@ -88,6 +97,7 @@ describe(PlayerController.name, () => {
 
     const result = await controller.remove('1');
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.remove).toHaveBeenCalledWith('1');
     expect(result).toEqual({ affected: 1 });
   });

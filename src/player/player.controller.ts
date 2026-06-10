@@ -14,7 +14,7 @@ import {
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { PlayerService } from './player.service';
 import { UpdatePlayerDto } from './dto/update-player.dto';
-import { AuthUser } from 'src/auth/auth-user.interface';
+import { AuthRequest } from 'src/auth/auth-user.interface';
 import { AuthGuard } from 'src/auth/auth.guard';
 
 @ApiTags('Player')
@@ -26,10 +26,10 @@ export class PlayerController {
 
   @Post()
   public create(
-    @Request() request: any,
+    @Request() request: AuthRequest,
     @Body() createPlayerDto: CreatePlayerDto,
   ) {
-    const user = request.user as AuthUser;
+    const user = request.user;
     return this.playerService.create(createPlayerDto, user);
   }
 
@@ -46,9 +46,10 @@ export class PlayerController {
   @Patch(':id')
   public update(
     @Param('id') id: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Body() updatePlayerDto: UpdatePlayerDto,
   ) {
-    return this.playerService.update(id, updatePlayerDto);
+    return this.playerService.update(id);
   }
 
   @Delete(':id')
