@@ -1,0 +1,46 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    branches: [main]
+    types:
+      - completed
+
+jobs:
+  publish-ghcr:
+    name: Publish to GHCR
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from package.json
+        id: package_version
+        run: echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha
+            type=raw,value=${{ steps.package_version.outputs.version }}
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
