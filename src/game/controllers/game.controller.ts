@@ -76,7 +76,11 @@ export class GameController {
   }
 
   @Post(':id/claim-timeout')
-  public claimTimeout(@Param('id') id: string) {
-    return this.gameService.claimTimeout(id);
+  public claimTimeout(
+    @Request() request: AuthRequest,
+    @Param('id') id: string,
+  ) {
+    const user = request.user;
+    return this.gameService.claimTimeout(id, user);
   }
 }

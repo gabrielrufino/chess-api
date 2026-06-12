@@ -11,6 +11,7 @@ import {
 import { Chess } from 'chess.js';
 import { Model } from 'mongoose';
 import { Game, GameDocument } from '../schemas/game.schema';
+import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
 
 describe(GameService.name, () => {
   let service: GameService;
@@ -207,9 +208,11 @@ describe(GameService.name, () => {
   });
 
   describe('claimTimeout', () => {
+    const mockAuthUser = { sub: 'user1' } as AuthUser;
+
     it('should throw NotFoundException if game not found', async () => {
       jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
-      await expect(service.claimTimeout('1')).rejects.toThrow(
+      await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -218,22 +221,63 @@ describe(GameService.name, () => {
       jest.spyOn(gameModel, 'findById').mockResolvedValue({
         status: GameStatusEnum.WAITING_PLAYER,
       });
-      await expect(service.claimTimeout('1')).rejects.toThrow(
+      await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
         BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException if game is not full', async () => {
+      jest.spyOn(gameModel, 'findById').mockResolvedValue({
+        status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: 'player1',
+      });
+      await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw NotFoundException if player not found', async () => {
+      jest.spyOn(gameModel, 'findById').mockResolvedValue({
+        status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: 'player1',
+        blackPlayerId: 'player2',
+      });
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
+      await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw ForbiddenException if user is not in the game', async () => {
+      jest.spyOn(gameModel, 'findById').mockResolvedValue({
+        status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: 'player1',
+        blackPlayerId: 'player2',
+      });
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player3' },
+      } as any);
+      await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
+        ForbiddenException,
       );
     });
 
     it('should throw BadRequestException if time is not up yet', async () => {
       const gameMock = {
         status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
         fen: new Chess().fen(),
         lastMoveAt: new Date(Date.now() - 10000), // 10 seconds ago
         whiteTimeRemainingMs: 60000, // 60 seconds left
         blackTimeRemainingMs: 60000,
       };
       jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player1' },
+      } as any);
 
-      await expect(service.claimTimeout('1')).rejects.toThrow(
+      await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -242,6 +286,8 @@ describe(GameService.name, () => {
       const mockSave = jest.fn();
       const gameMock = {
         status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
         fen: new Chess().fen(),
         lastMoveAt: new Date(Date.now() - 70000), // 70 seconds ago
         whiteTimeRemainingMs: 60000, // 60 seconds left
@@ -249,8 +295,11 @@ describe(GameService.name, () => {
         save: mockSave,
       };
       jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player1' },
+      } as any);
 
-      const result = await service.claimTimeout('1');
+      const result = await service.claimTimeout('1', mockAuthUser);
       expect(result.status).toBe(GameStatusEnum.TIMEOUT);
       expect(mockSave).toHaveBeenCalled();
     });

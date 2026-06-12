@@ -243,7 +243,7 @@ export class GameService {
     return game;
   }
 
-  public async claimTimeout(id: string) {
+  public async claimTimeout(id: string, authUser: AuthUser) {
     const game = await this.gameModel.findById(id);
     if (!game) {
       throw new NotFoundException('Game not found');
@@ -251,6 +251,23 @@ export class GameService {
 
     if (game.status !== GameStatusEnum.IN_PROGRESS) {
       throw new BadRequestException('Game is not in progress');
+    }
+
+    if (!game.whitePlayerId || !game.blackPlayerId) {
+      throw new BadRequestException('Game is not full yet');
+    }
+
+    const player = await this.playerModel.findOne({ userId: authUser.sub });
+    if (!player) {
+      throw new NotFoundException('Player not found');
+    }
+
+    const playerIdStr = player._id.toString();
+    if (
+      playerIdStr !== game.whitePlayerId.toString() &&
+      playerIdStr !== game.blackPlayerId.toString()
+    ) {
+      throw new ForbiddenException('You are not a player in this game');
     }
 
     const chess = new Chess();
