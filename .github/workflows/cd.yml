@@ -27,7 +27,11 @@ jobs:
 
       - name: Get version from package.json
         id: package_version
-        run: echo "version=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "major=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_OUTPUT
+          echo "major_minor=$(echo $VERSION | cut -d. -f1).$(echo $VERSION | cut -d. -f2)" >> $GITHUB_OUTPUT
 
       - id: meta
         uses: docker/metadata-action@v5
@@ -37,6 +41,8 @@ jobs:
             type=raw,value=latest
             type=sha
             type=raw,value=${{ steps.package_version.outputs.version }}
+            type=raw,value=${{ steps.package_version.outputs.major_minor }}
+            type=raw,value=${{ steps.package_version.outputs.major }}
 
       - uses: docker/build-push-action@v5
         with:
