@@ -1,7 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { GuestUserService } from './guest-user.service';
+import { GuestUserService } from '../services/guest-user.service';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateGuestUserDto } from './dto/create-guest-user.dto';
+import { CreateGuestUserDto } from '../dto/create-guest-user.dto';
 
 @ApiTags('Guest users')
 @Controller('guest-users')

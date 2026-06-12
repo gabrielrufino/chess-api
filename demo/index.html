@@ -40,10 +40,7 @@
     <div class="field">
       <label for="duration">Game duration</label>
       <select id="duration">
-        <option value="unlimited">Unlimited</option>
-        <option value="1min">1 minute</option>
-        <option value="5min" selected>5 minutes</option>
-        <option value="10min">10 minutes</option>
+        <option value="">Loading modes...</option>
       </select>
     </div>
     <button id="join-btn" class="btn btn-primary">Enter game</button>
@@ -73,6 +70,25 @@
         <div id="status-bar">
           <span class="spinner"></span>
           <span id="status-text">Connecting…</span>
+        </div>
+
+        <div class="side-card clocks-card" id="clocks-container" style="display:none; margin-bottom: 1rem;">
+          <h3>Clocks</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="font-size: 0.9rem; color: var(--text-muted); display:flex; align-items:center; gap: 8px;">
+              <div style="width:12px; height:12px; background: white; border:1px solid #ccc; border-radius:50%;"></div>
+              White
+            </div>
+            <div id="white-clock" style="font-size: 1.5rem; font-weight: bold; font-family: monospace;">--:--</div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div style="font-size: 0.9rem; color: var(--text-muted); display:flex; align-items:center; gap: 8px;">
+              <div style="width:12px; height:12px; background: black; border:1px solid #ccc; border-radius:50%;"></div>
+              Black
+            </div>
+            <div id="black-clock" style="font-size: 1.5rem; font-weight: bold; font-family: monospace;">--:--</div>
+          </div>
+          <button id="claim-timeout-btn" class="btn btn-primary" style="width:100%; display:none;">Claim Timeout</button>
         </div>
 
         <div class="side-card">

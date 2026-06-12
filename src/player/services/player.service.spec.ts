@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlayerService } from './player.service';
 import { getModelToken } from '@nestjs/mongoose';
-import { Player } from './schemas/player.schema';
+import { Player } from '../schemas/player.schema';
 import { Model } from 'mongoose';
 
 describe(PlayerService.name, () => {

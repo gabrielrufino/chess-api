@@ -11,11 +11,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { CreatePlayerDto } from './dto/create-player.dto';
-import { PlayerService } from './player.service';
-import { UpdatePlayerDto } from './dto/update-player.dto';
-import { AuthRequest } from 'src/auth/auth-user.interface';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { CreatePlayerDto } from '../dto/create-player.dto';
+import { PlayerService } from '../services/player.service';
+import { UpdatePlayerDto } from '../dto/update-player.dto';
+import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
+import { AuthGuard } from 'src/auth/guards/auth.guard';
 
 @ApiTags('Player')
 @ApiBearerAuth()

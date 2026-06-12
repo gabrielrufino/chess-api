@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 
-import { CreatePlayerDto } from './dto/create-player.dto';
+import { CreatePlayerDto } from '../dto/create-player.dto';
 
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Player, PlayerDocument } from './schemas/player.schema';
-import { AuthUser } from 'src/auth/auth-user.interface';
+import { Player, PlayerDocument } from '../schemas/player.schema';
+import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
 
 @Injectable()
 export class PlayerService {
