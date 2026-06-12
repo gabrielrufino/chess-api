@@ -18,6 +18,8 @@ const state = {
   pollingTimer: null,
   chess: null,       // chess.js instance (client-side validation)
   board: null,       // chessboard.js instance
+  gameData: null,    // latest game data from server
+  visualClockTimer: null, // local interval for visual clock
 };
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
@@ -95,6 +97,26 @@ async function joinGame(duration) {
   return data; // { _id, whitePlayerId, blackPlayerId, status, fen, ... }
 }
 
+// ── Step 4 — Fetch available game modes ────────────────────────────────────
+async function loadGameModes() {
+  try {
+    const durations = await apiFetch('/games/durations');
+    const select = $('duration');
+    select.innerHTML = '';
+    
+    durations.forEach(mode => {
+      const opt = document.createElement('option');
+      opt.value = mode.value;
+      opt.textContent = mode.label;
+      if (mode.value === '5min') opt.selected = true;
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error('Failed to load durations:', err);
+    $('duration').innerHTML = '<option value="5min">5 minutes (fallback)</option>';
+  }
+}
+
 // ── Polling — Fetch current game state ────────────────────────────────────────
 async function fetchGameState() {
   try {
@@ -109,8 +131,16 @@ async function fetchGameState() {
 }
 
 function handleGameUpdate(game, boardData) {
-  const { status, whitePlayerId, blackPlayerId, pgn } = game;
+  state.gameData = game;
+  const { status, whitePlayerId, blackPlayerId, pgn, whiteTimeRemainingMs, blackTimeRemainingMs } = game;
   const { fen } = boardData;
+
+  // Show clocks container if there's a time control
+  if (whiteTimeRemainingMs !== undefined && blackTimeRemainingMs !== undefined) {
+    $('clocks-container').style.display = 'block';
+  } else {
+    $('clocks-container').style.display = 'none';
+  }
 
   // Update chessboard position
   if (state.board && fen) {
@@ -133,6 +163,19 @@ function handleGameUpdate(game, boardData) {
     const iWon = (winnerIsWhite && state.playerColor === 'white') ||
                  (!winnerIsWhite && state.playerColor === 'black');
     setStatus(iWon ? '🏆 Checkmate — You won!' : '💀 Checkmate — You lost.', 'over');
+    return;
+  }
+
+  if (status === 'TIMEOUT') {
+    stopPolling();
+    // In our current implementation, we know time ran out. 
+    // We can infer who lost based on whose turn it was when time expired, or just show a generic timeout message.
+    const myColor = state.playerColor === 'white' ? 'w' : 'b';
+    const chessTurn = state.chess.turn();
+    const iLost = chessTurn === myColor;
+    setStatus(iLost ? '⏰ Time is up! You lost on time.' : '⏰ Time is up! You won on time.', 'over');
+    $('claim-timeout-btn').style.display = 'none';
+    updateClocksVisuals();
     return;
   }
 
@@ -260,6 +303,10 @@ function initBoard(orientation) {
 function startPolling() {
   fetchGameState(); // immediate first call
   state.pollingTimer = setInterval(fetchGameState, POLL_INTERVAL_MS);
+  
+  if (!state.visualClockTimer) {
+    state.visualClockTimer = setInterval(updateClocksVisuals, 100);
+  }
 }
 
 function stopPolling() {
@@ -267,6 +314,67 @@ function stopPolling() {
     clearInterval(state.pollingTimer);
     state.pollingTimer = null;
   }
+  if (state.visualClockTimer) {
+    clearInterval(state.visualClockTimer);
+    state.visualClockTimer = null;
+  }
+}
+
+// ── Clock visual helpers ──────────────────────────────────────────────────────
+function updateClocksVisuals() {
+  const gameData = state.gameData;
+  if (!gameData) return;
+  if (gameData.whiteTimeRemainingMs === undefined || gameData.blackTimeRemainingMs === undefined) {
+    return; // Unlimited
+  }
+
+  let wTime = gameData.whiteTimeRemainingMs;
+  let bTime = gameData.blackTimeRemainingMs;
+
+  const chessTurn = state.chess ? state.chess.turn() : 'w';
+
+  // If game is in progress, subtract elapsed time since lastMoveAt locally
+  if (gameData.status === 'IN_PROGRESS' && gameData.lastMoveAt) {
+    const now = new Date().getTime();
+    const lastMove = new Date(gameData.lastMoveAt).getTime();
+    const elapsed = Math.max(0, now - lastMove);
+
+    if (chessTurn === 'w') {
+      wTime -= elapsed;
+    } else {
+      bTime -= elapsed;
+    }
+  }
+
+  wTime = Math.max(0, wTime);
+  bTime = Math.max(0, bTime);
+
+  $('white-clock').textContent = formatTime(wTime);
+  $('black-clock').textContent = formatTime(bTime);
+
+  // Check if we can claim timeout
+  if (gameData.status === 'IN_PROGRESS') {
+    const myColor = state.playerColor === 'white' ? 'w' : 'b';
+    if (chessTurn !== myColor) {
+      // Opponent's turn
+      if ((chessTurn === 'w' && wTime === 0) || (chessTurn === 'b' && bTime === 0)) {
+        $('claim-timeout-btn').style.display = 'block';
+      } else {
+        $('claim-timeout-btn').style.display = 'none';
+      }
+    } else {
+      $('claim-timeout-btn').style.display = 'none';
+    }
+  } else {
+    $('claim-timeout-btn').style.display = 'none';
+  }
+}
+
+function formatTime(ms) {
+  const totalSeconds = Math.ceil(ms / 1000); // Math.ceil is nicer for chess clocks (shows 1 when 0.1s left)
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
 // ── Determine player color ────────────────────────────────────────────────────
@@ -339,4 +447,19 @@ function generateGuestName() {
 document.addEventListener('DOMContentLoaded', () => {
   $('guest-name').value = generateGuestName();
   $('join-btn').addEventListener('click', enterGame);
+  
+  loadGameModes();
+  
+  $('claim-timeout-btn').addEventListener('click', async () => {
+    const btn = $('claim-timeout-btn');
+    btn.disabled = true;
+    try {
+      await apiFetch(`/games/${state.gameId}/claim-timeout`, { method: 'POST' });
+      await fetchGameState(); // Force immediate update
+    } catch (err) {
+      alert(`Could not claim timeout: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 });

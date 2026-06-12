@@ -3,4 +3,5 @@ export enum GameStatusEnum {
   IN_PROGRESS = 'IN_PROGRESS',
   CHECKMATE = 'CHECKMATE',
   DRAW = 'DRAW',
+  TIMEOUT = 'TIMEOUT',
 }

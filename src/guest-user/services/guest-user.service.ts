@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { CreateGuestUserDto } from './dto/create-guest-user.dto';
-import { AuthService } from 'src/auth/auth.service';
+import { CreateGuestUserDto } from '../dto/create-guest-user.dto';
+import { AuthService } from 'src/auth/services/auth.service';
 import { randomUUID } from 'crypto';
 
 @Injectable()

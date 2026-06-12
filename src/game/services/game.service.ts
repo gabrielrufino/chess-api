@@ -5,16 +5,18 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 
-import { CreateGameDto } from './dto/create-game.dto';
-import { CreateMoveDto } from './dto/create-move.dto';
-import { UpdateGameDto } from './dto/update-game.dto';
+import { CreateGameDto } from '../dto/create-game.dto';
+import { CreateMoveDto } from '../dto/create-move.dto';
+import { UpdateGameDto } from '../dto/update-game.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Player, PlayerDocument } from 'src/player/schemas/player.schema';
-import { Game, GameDocument } from './schemas/game.schema';
-import { AuthUser } from 'src/auth/auth-user.interface';
-import { GameStatusEnum } from './enumerables/game-status.enum';
+import { Game, GameDocument } from '../schemas/game.schema';
+import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
+import { GameStatusEnum } from '../enumerables/game-status.enum';
+import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { Chess } from 'chess.js';
+import { parseGameDuration } from '../utils/time-control.util';
 
 @Injectable()
 export class GameService {
@@ -34,6 +36,8 @@ export class GameService {
       throw new NotFoundException('Player not found');
     }
 
+    const timeControl = parseGameDuration(createGameDto.duration);
+
     const gameWaitingPlayer = await this.gameModel.findOneAndUpdate(
       {
         blackPlayerId: null,
@@ -44,6 +48,7 @@ export class GameService {
         $set: {
           blackPlayerId: player._id,
           status: GameStatusEnum.IN_PROGRESS,
+          lastMoveAt: new Date(),
         },
       },
       { returnDocument: 'after' },
@@ -56,9 +61,30 @@ export class GameService {
     const newGame = await this.gameModel.create({
       ...createGameDto,
       whitePlayerId: player._id,
+      whiteTimeRemainingMs: timeControl?.initialTimeMs,
+      blackTimeRemainingMs: timeControl?.initialTimeMs,
+      incrementMs: timeControl?.incrementMs || 0,
     });
 
     return newGame;
+  }
+
+  public getDurations() {
+    const labels: Record<GameDurationEnum, string> = {
+      [GameDurationEnum.Unlimited]: 'Unlimited',
+      [GameDurationEnum.OneMinute]: '1 minute',
+      [GameDurationEnum.ThreePlusTwo]: '3 min + 2 sec',
+      [GameDurationEnum.FiveMinutes]: '5 minutes',
+      [GameDurationEnum.FivePlusThree]: '5 min + 3 sec',
+      [GameDurationEnum.TenMinutes]: '10 minutes',
+      [GameDurationEnum.TenPlusFive]: '10 min + 5 sec',
+      [GameDurationEnum.FifteenPlusTen]: '15 min + 10 sec',
+    };
+
+    return Object.values(GameDurationEnum).map((value) => ({
+      value,
+      label: labels[value] || value,
+    }));
   }
 
   public async findAll() {
@@ -165,6 +191,34 @@ export class GameService {
       throw new ForbiddenException('Not your turn or you are not in this game');
     }
 
+    const now = new Date();
+    if (
+      game.lastMoveAt &&
+      game.whiteTimeRemainingMs !== undefined &&
+      game.blackTimeRemainingMs !== undefined
+    ) {
+      const elapsedMs = now.getTime() - game.lastMoveAt.getTime();
+      if (isWhiteTurn) {
+        game.whiteTimeRemainingMs -= elapsedMs;
+        if (game.whiteTimeRemainingMs <= 0) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.whiteTimeRemainingMs = 0;
+          await game.save();
+          throw new BadRequestException('Time is up for White');
+        }
+        game.whiteTimeRemainingMs += game.incrementMs;
+      } else {
+        game.blackTimeRemainingMs -= elapsedMs;
+        if (game.blackTimeRemainingMs <= 0) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.blackTimeRemainingMs = 0;
+          await game.save();
+          throw new BadRequestException('Time is up for Black');
+        }
+        game.blackTimeRemainingMs += game.incrementMs;
+      }
+    }
+
     // In chess.js v1, move() throws InvalidMoveError instead of returning null
     try {
       chess.move(createMoveDto.move);
@@ -174,6 +228,7 @@ export class GameService {
 
     game.fen = chess.fen();
     game.pgn = chess.pgn();
+    game.lastMoveAt = now;
 
     if (chess.isGameOver()) {
       if (chess.isCheckmate()) {
@@ -186,5 +241,57 @@ export class GameService {
     await game.save();
 
     return game;
+  }
+
+  public async claimTimeout(id: string) {
+    const game = await this.gameModel.findById(id);
+    if (!game) {
+      throw new NotFoundException('Game not found');
+    }
+
+    if (game.status !== GameStatusEnum.IN_PROGRESS) {
+      throw new BadRequestException('Game is not in progress');
+    }
+
+    const chess = new Chess();
+    try {
+      if (game.pgn) {
+        chess.loadPgn(game.pgn);
+      } else if (game.fen) {
+        chess.load(game.fen);
+      }
+    } catch {
+      throw new BadRequestException('Corrupted game state');
+    }
+
+    const isWhiteTurn = chess.turn() === 'w';
+
+    if (
+      !game.lastMoveAt ||
+      game.whiteTimeRemainingMs === undefined ||
+      game.blackTimeRemainingMs === undefined
+    ) {
+      throw new BadRequestException('This game does not have a time control');
+    }
+
+    const elapsedMs = new Date().getTime() - game.lastMoveAt.getTime();
+
+    if (isWhiteTurn) {
+      if (game.whiteTimeRemainingMs - elapsedMs <= 0) {
+        game.status = GameStatusEnum.TIMEOUT;
+        game.whiteTimeRemainingMs = 0;
+        await game.save();
+        return game;
+      }
+    } else {
+      if (game.blackTimeRemainingMs - elapsedMs <= 0) {
+        game.status = GameStatusEnum.TIMEOUT;
+        game.blackTimeRemainingMs = 0;
+        await game.save();
+        return game;
+      }
+    }
+
+    throw new BadRequestException('Time is not up yet');
   }
 }

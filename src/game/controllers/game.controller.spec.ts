@@ -2,8 +2,9 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { GameController } from './game.controller';
-import { GameService } from './game.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { GameService } from '../services/game.service';
+import { AuthGuard } from '../../auth/guards/auth.guard';
+import { GameDurationEnum } from '../enumerables/game-duration.enum';
 
 describe(GameController.name, () => {
   let controller: GameController;
@@ -23,6 +24,7 @@ describe(GameController.name, () => {
             getBoard: jest.fn(),
             getMoves: jest.fn(),
             makeMove: jest.fn(),
+            getDurations: jest.fn(),
           },
         },
         {
@@ -85,5 +87,18 @@ describe(GameController.name, () => {
       request.user,
     );
     expect(result).toEqual({ id: '1' });
+  });
+
+  it('should get durations', () => {
+    const durationsResult = [
+      { value: GameDurationEnum.FiveMinutes, label: '5 minutes' },
+    ];
+    jest.spyOn(service, 'getDurations').mockReturnValue(durationsResult);
+
+    const result = controller.getDurations();
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(service.getDurations).toHaveBeenCalled();
+    expect(result).toEqual(durationsResult);
   });
 });

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlayerController } from './player.controller';
-import { PlayerService } from './player.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { PlayerService } from '../services/player.service';
+import { AuthGuard } from '../../auth/guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
 
 describe(PlayerController.name, () => {

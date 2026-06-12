@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GuestUserService } from './guest-user.service';
-import { AuthService } from '../auth/auth.service';
+import { AuthService } from '../../auth/services/auth.service';
 
 jest.mock('crypto', () => ({
   randomUUID: jest.fn().mockReturnValue('mock-uuid'),

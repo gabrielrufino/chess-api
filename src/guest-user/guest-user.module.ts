@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { GuestUserService } from './guest-user.service';
-import { GuestUserController } from './guest-user.controller';
+import { GuestUserService } from './services/guest-user.service';
+import { GuestUserController } from './controllers/guest-user.controller';
 import { AuthModule } from 'src/auth/auth.module';
 
 @Module({

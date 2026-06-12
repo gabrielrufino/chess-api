@@ -24,6 +24,18 @@ export class Game {
 
   @Prop({ default: GameStatusEnum.WAITING_PLAYER, enum: GameStatusEnum })
   status: GameStatusEnum;
+
+  @Prop({ required: false })
+  whiteTimeRemainingMs?: number;
+
+  @Prop({ required: false })
+  blackTimeRemainingMs?: number;
+
+  @Prop({ default: 0 })
+  incrementMs: number;
+
+  @Prop({ required: false })
+  lastMoveAt?: Date;
 }
 
 export const GameSchema = SchemaFactory.createForClass(Game);

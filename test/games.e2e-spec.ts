@@ -1,12 +1,12 @@
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { MongooseModule } from '@nestjs/mongoose';
+import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import faker from '@faker-js/faker';
 import * as request from 'supertest';
 
 import { AuthModule } from '../src/auth/auth.module';
-import { AuthGuard } from '../src/auth/auth.guard';
+import { AuthGuard } from '../src/auth/guards/auth.guard';
 import { GameModule } from '../src/game/game.module';
 import { PlayerModule } from '../src/player/player.module';
 import { createPlayer } from './helpers/create-player';
@@ -230,6 +230,82 @@ describe('GameModule (e2e)', () => {
         .post(`/games/${gameId}/moves`)
         .set('x-user-id', player2Id)
         .send({ move: 'd6' })
+        .expect(400); // Bad Request
+    });
+  });
+
+  describe('Time Control', () => {
+    it('Should allow a player to claim timeout when opponent time expires', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { authUserId: player1Id } = await createPlayer(app);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { authUserId: player2Id } = await createPlayer(app);
+
+      // Player 1 creates game (1min)
+      const res1 = await request(app.getHttpServer())
+        .post('/games')
+        .set('x-user-id', player1Id)
+        .send({ duration: GameDurationEnum.OneMinute });
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const gameId = res1.body._id;
+
+      // Player 2 joins game
+      await request(app.getHttpServer())
+        .post('/games')
+        .set('x-user-id', player2Id)
+        .send({ duration: GameDurationEnum.OneMinute });
+
+      // Hack the database to make it look like 2 minutes have passed
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const gameModel = app.get(getModelToken('Game'));
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      await gameModel.findByIdAndUpdate(gameId, {
+        lastMoveAt: new Date(Date.now() - 120000),
+      });
+
+      // Player 2 claims timeout because player 1 didn't move
+      const claimRes = await request(app.getHttpServer())
+        .post(`/games/${gameId}/claim-timeout`)
+        .set('x-user-id', player2Id)
+        .expect(201);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(claimRes.body.status).toBe('TIMEOUT');
+    });
+
+    it('Should throw bad request if a move is made after time expires', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { authUserId: player1Id } = await createPlayer(app);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { authUserId: player2Id } = await createPlayer(app);
+
+      const res1 = await request(app.getHttpServer())
+        .post('/games')
+        .set('x-user-id', player1Id)
+        .send({ duration: GameDurationEnum.OneMinute });
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+      const gameId = res1.body._id;
+
+      await request(app.getHttpServer())
+        .post('/games')
+        .set('x-user-id', player2Id)
+        .send({ duration: GameDurationEnum.OneMinute });
+
+      // Hack the database
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const gameModel = app.get(getModelToken('Game'));
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      await gameModel.findByIdAndUpdate(gameId, {
+        lastMoveAt: new Date(Date.now() - 120000),
+      });
+
+      // Player 1 tries to move but time is up
+      await request(app.getHttpServer())
+        .post(`/games/${gameId}/moves`)
+        .set('x-user-id', player1Id)
+        .send({ move: 'e4' })
         .expect(400); // Bad Request
     });
   });
