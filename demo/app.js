@@ -3,7 +3,10 @@ import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm';
 // =============================================================================
 // CONFIGURATION — change API_BASE_URL to point to your Chess API instance
 // =============================================================================
-const API_BASE_URL = 'http://localhost:3000';
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE_URL = isLocalhost
+  ? 'http://localhost:3000'
+  : 'https://chess-api.gabrielrufino.com'; // Substitua pela sua URL de produção
 // =============================================================================
 
 // ── Polling interval in milliseconds ──────────────────────────────────────────
@@ -103,7 +106,7 @@ async function loadGameModes() {
     const durations = await apiFetch('/games/durations');
     const select = $('duration');
     select.innerHTML = '';
-    
+
     durations.forEach(mode => {
       const opt = document.createElement('option');
       opt.value = mode.value;
@@ -161,7 +164,7 @@ function handleGameUpdate(game, boardData) {
     // Determine winner
     const winnerIsWhite = state.chess.turn() === 'b'; // the player who just moved wins
     const iWon = (winnerIsWhite && state.playerColor === 'white') ||
-                 (!winnerIsWhite && state.playerColor === 'black');
+      (!winnerIsWhite && state.playerColor === 'black');
     setStatus(iWon ? '🏆 Checkmate — You won!' : '💀 Checkmate — You lost.', 'over');
     return;
   }
@@ -303,7 +306,7 @@ function initBoard(orientation) {
 function startPolling() {
   fetchGameState(); // immediate first call
   state.pollingTimer = setInterval(fetchGameState, POLL_INTERVAL_MS);
-  
+
   if (!state.visualClockTimer) {
     state.visualClockTimer = setInterval(updateClocksVisuals, 100);
   }
@@ -447,9 +450,9 @@ function generateGuestName() {
 document.addEventListener('DOMContentLoaded', () => {
   $('guest-name').value = generateGuestName();
   $('join-btn').addEventListener('click', enterGame);
-  
+
   loadGameModes();
-  
+
   $('claim-timeout-btn').addEventListener('click', async () => {
     const btn = $('claim-timeout-btn');
     btn.disabled = true;
