@@ -3,10 +3,10 @@ import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm';
 // =============================================================================
 // CONFIGURATION — change API_BASE_URL to point to your Chess API instance
 // =============================================================================
-const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const isLocalhost = ['localhost', '127.0.0.1', '[::1]', '::1'].includes(window.location.hostname);
 const API_BASE_URL = isLocalhost
   ? 'http://localhost:3000'
-  : 'https://chess-api.gabrielrufino.com'; // Substitua pela sua URL de produção
+  : 'https://chess-api.gabrielrufino.com';
 // =============================================================================
 
 // ── Polling interval in milliseconds ──────────────────────────────────────────
