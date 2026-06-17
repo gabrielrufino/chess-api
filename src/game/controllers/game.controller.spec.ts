@@ -72,8 +72,8 @@ describe(GameController.name, () => {
   it('should make move', async () => {
     const request = { user: { sub: 'user-id' } };
     const createMoveDto = { move: 'e4' };
-    const mockGame = { _id: '1', toJSON: () => ({ _id: '1' }) } as any;
-    jest.spyOn(service, 'makeMove').mockResolvedValue(mockGame);
+    const mockGame = { _id: '1', toJSON: () => ({ _id: '1' }) };
+    jest.spyOn(service, 'makeMove').mockResolvedValue(mockGame as any);
 
     const result = await controller.makeMove(
       request as any,

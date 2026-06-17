@@ -80,7 +80,7 @@ export class GameController {
     type: GameDto,
   })
   @Get(':id')
-  public async findOne(@Param('id') id: string): Promise<GameDto> {
+  public async findOne(@Param('id') id: string): Promise<GameDto | null> {
     const game = await this.gameService.findOne(id);
     return game ? plainToInstance(GameDto, game.toJSON()) : null;
   }

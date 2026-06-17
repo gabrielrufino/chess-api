@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { GameStatusEnum } from '../enumerables/game-status.enum';
 
@@ -75,6 +75,7 @@ export class GameDto {
 @Exclude()
 export class GameListDto {
   @Expose()
+  @Type(() => GameDto)
   @ApiProperty({ type: [GameDto], description: 'List of games' })
   data: GameDto[];
 

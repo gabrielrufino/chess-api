@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 
 @Exclude()
 export class PlayerDto {
@@ -33,6 +33,7 @@ export class PlayerDto {
 @Exclude()
 export class PlayerListDto {
   @Expose()
+  @Type(() => PlayerDto)
   @ApiProperty({ type: [PlayerDto], description: 'List of players' })
   data: PlayerDto[];
 

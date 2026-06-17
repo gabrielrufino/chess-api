@@ -63,7 +63,7 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Get(':id')
-  public async findOne(@Param('id') id: string): Promise<PlayerDto> {
+  public async findOne(@Param('id') id: string): Promise<PlayerDto | null> {
     const player = await this.playerService.findOne(id);
     return player ? plainToInstance(PlayerDto, player.toJSON()) : null;
   }
@@ -86,7 +86,7 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Delete(':id')
-  public async remove(@Param('id') id: string): Promise<PlayerDto> {
+  public async remove(@Param('id') id: string): Promise<PlayerDto | null> {
     const player = await this.playerService.remove(id);
     return player ? plainToInstance(PlayerDto, player.toJSON()) : null;
   }
