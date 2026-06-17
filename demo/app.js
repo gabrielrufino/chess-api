@@ -451,6 +451,11 @@ document.addEventListener('DOMContentLoaded', () => {
   $('guest-name').value = generateGuestName();
   $('join-btn').addEventListener('click', enterGame);
 
+  const apiDocsLink = $('api-docs-link');
+  if (apiDocsLink) {
+    apiDocsLink.href = `${API_BASE_URL}/api`;
+  }
+
   loadGameModes();
 
   $('claim-timeout-btn').addEventListener('click', async () => {
