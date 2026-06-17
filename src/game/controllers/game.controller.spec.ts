@@ -72,7 +72,8 @@ describe(GameController.name, () => {
   it('should make move', async () => {
     const request = { user: { sub: 'user-id' } };
     const createMoveDto = { move: 'e4' };
-    jest.spyOn(service, 'makeMove').mockResolvedValue({ id: '1' } as any);
+    const mockGame = { _id: '1', toJSON: () => ({ _id: '1' }) } as any;
+    jest.spyOn(service, 'makeMove').mockResolvedValue(mockGame);
 
     const result = await controller.makeMove(
       request as any,
@@ -86,7 +87,7 @@ describe(GameController.name, () => {
       createMoveDto,
       request.user,
     );
-    expect(result).toEqual({ id: '1' });
+    expect(result).toEqual(expect.objectContaining({ _id: '1' }));
   });
 
   it('should get durations', () => {

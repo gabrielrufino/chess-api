@@ -22,6 +22,7 @@ import { UpdatePlayerDto } from '../dto/update-player.dto';
 import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { PlayerDto, PlayerListDto } from '../dto/player-response.dto';
+import { plainToInstance } from 'class-transformer';
 
 @ApiTags('Player')
 @ApiBearerAuth()
@@ -35,15 +36,13 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Post()
-  public create(
+  public async create(
     @Request() request: AuthRequest,
     @Body() createPlayerDto: CreatePlayerDto,
   ): Promise<PlayerDto> {
     const user = request.user;
-    return this.playerService.create(
-      createPlayerDto,
-      user,
-    ) as unknown as Promise<PlayerDto>;
+    const player = await this.playerService.create(createPlayerDto, user);
+    return plainToInstance(PlayerDto, player.toJSON());
   }
 
   @ApiOkResponse({
@@ -51,8 +50,12 @@ export class PlayerController {
     type: PlayerListDto,
   })
   @Get()
-  public findAll(): Promise<PlayerListDto> {
-    return this.playerService.findAll() as unknown as Promise<PlayerListDto>;
+  public async findAll(): Promise<PlayerListDto> {
+    const result = await this.playerService.findAll();
+    return plainToInstance(PlayerListDto, {
+      data: result.data.map((player) => player.toJSON()),
+      total: result.total,
+    });
   }
 
   @ApiOkResponse({
@@ -60,8 +63,9 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Get(':id')
-  public findOne(@Param('id') id: string): Promise<PlayerDto> {
-    return this.playerService.findOne(id) as unknown as Promise<PlayerDto>;
+  public async findOne(@Param('id') id: string): Promise<PlayerDto> {
+    const player = await this.playerService.findOne(id);
+    return player ? plainToInstance(PlayerDto, player.toJSON()) : null;
   }
 
   @ApiOkResponse({
@@ -82,7 +86,8 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Delete(':id')
-  public remove(@Param('id') id: string): Promise<PlayerDto> {
-    return this.playerService.remove(id) as unknown as Promise<PlayerDto>;
+  public async remove(@Param('id') id: string): Promise<PlayerDto> {
+    const player = await this.playerService.remove(id);
+    return player ? plainToInstance(PlayerDto, player.toJSON()) : null;
   }
 }

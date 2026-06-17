@@ -47,35 +47,39 @@ describe(PlayerController.name, () => {
     const request = {
       user: { sub: 'user-id', isGuest: true, username: 'test' },
     };
-    jest.spyOn(service, 'create').mockResolvedValue(createPlayerDto as any);
+    const mockPlayer = { _id: '1', toJSON: () => ({ _id: '1' }) };
+    jest.spyOn(service, 'create').mockResolvedValue(mockPlayer as any);
 
     const result = await controller.create(request as any, createPlayerDto);
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.create).toHaveBeenCalledWith(createPlayerDto, request.user);
-    expect(result).toEqual(createPlayerDto);
+    expect(result).toEqual(expect.objectContaining({ _id: '1' }));
   });
 
   it('should find all players', async () => {
-    const players = { data: [{ id: '1', nickname: 'test' }], total: 1 };
+    const players = {
+      data: [{ _id: '1', nickname: 'test', toJSON: () => ({ _id: '1' }) }],
+      total: 1,
+    };
     jest.spyOn(service, 'findAll').mockResolvedValue(players as any);
 
     const result = await controller.findAll();
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.findAll).toHaveBeenCalled();
-    expect(result).toEqual(players);
+    expect(result).toEqual(expect.objectContaining({ total: 1 }));
   });
 
   it('should find one player', async () => {
-    const player = { id: '1', nickname: 'test' };
-    jest.spyOn(service, 'findOne').mockResolvedValue(player as any);
+    const mockPlayer = { _id: '1', toJSON: () => ({ _id: '1' }) };
+    jest.spyOn(service, 'findOne').mockResolvedValue(mockPlayer as any);
 
     const result = await controller.findOne('1');
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.findOne).toHaveBeenCalledWith('1');
-    expect(result).toEqual(player);
+    expect(result).toEqual(expect.objectContaining({ _id: '1' }));
   });
 
   it('should update a player', () => {
@@ -93,12 +97,13 @@ describe(PlayerController.name, () => {
   });
 
   it('should remove a player', async () => {
-    jest.spyOn(service, 'remove').mockResolvedValue({ affected: 1 } as any);
+    const mockPlayer = { _id: '1', toJSON: () => ({ _id: '1' }) };
+    jest.spyOn(service, 'remove').mockResolvedValue(mockPlayer as any);
 
     const result = await controller.remove('1');
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.remove).toHaveBeenCalledWith('1');
-    expect(result).toEqual({ affected: 1 });
+    expect(result).toEqual(expect.objectContaining({ _id: '1' }));
   });
 });

@@ -29,6 +29,7 @@ import {
   GameBoardDto,
   GameMoveDto,
 } from '../dto/game-response.dto';
+import { plainToInstance } from 'class-transformer';
 
 @ApiTags('Game')
 @ApiBearerAuth()
@@ -42,15 +43,13 @@ export class GameController {
     type: GameDto,
   })
   @Post()
-  public create(
+  public async create(
     @Request() request: AuthRequest,
     @Body() createGameDto: CreateGameDto,
   ): Promise<GameDto> {
     const user = request.user;
-    return this.gameService.create(
-      createGameDto,
-      user,
-    ) as unknown as Promise<GameDto>;
+    const game = await this.gameService.create(createGameDto, user);
+    return plainToInstance(GameDto, game.toJSON());
   }
 
   @ApiOkResponse({
@@ -60,7 +59,7 @@ export class GameController {
   @Public()
   @Get('durations')
   public getDurations(): GameDurationDto[] {
-    return this.gameService.getDurations();
+    return plainToInstance(GameDurationDto, this.gameService.getDurations());
   }
 
   @ApiOkResponse({
@@ -68,8 +67,12 @@ export class GameController {
     type: GameListDto,
   })
   @Get()
-  public findAll(): Promise<GameListDto> {
-    return this.gameService.findAll() as unknown as Promise<GameListDto>;
+  public async findAll(): Promise<GameListDto> {
+    const result = await this.gameService.findAll();
+    return plainToInstance(GameListDto, {
+      data: result.data.map((game) => game.toJSON()),
+      total: result.total,
+    });
   }
 
   @ApiOkResponse({
@@ -77,8 +80,9 @@ export class GameController {
     type: GameDto,
   })
   @Get(':id')
-  public findOne(@Param('id') id: string): Promise<GameDto> {
-    return this.gameService.findOne(id) as unknown as Promise<GameDto>;
+  public async findOne(@Param('id') id: string): Promise<GameDto> {
+    const game = await this.gameService.findOne(id);
+    return game ? plainToInstance(GameDto, game.toJSON()) : null;
   }
 
   @ApiOkResponse({
@@ -98,8 +102,9 @@ export class GameController {
     type: GameBoardDto,
   })
   @Get(':id/board')
-  public getBoard(@Param('id') id: string): Promise<GameBoardDto> {
-    return this.gameService.getBoard(id);
+  public async getBoard(@Param('id') id: string): Promise<GameBoardDto> {
+    const board = await this.gameService.getBoard(id);
+    return plainToInstance(GameBoardDto, board);
   }
 
   @ApiOkResponse({
@@ -107,8 +112,9 @@ export class GameController {
     type: [GameMoveDto],
   })
   @Get(':id/moves')
-  public getMoves(@Param('id') id: string): Promise<GameMoveDto[]> {
-    return this.gameService.getMoves(id) as unknown as Promise<GameMoveDto[]>;
+  public async getMoves(@Param('id') id: string): Promise<GameMoveDto[]> {
+    const moves = await this.gameService.getMoves(id);
+    return plainToInstance(GameMoveDto, moves);
   }
 
   @ApiCreatedResponse({
@@ -116,17 +122,14 @@ export class GameController {
     type: GameDto,
   })
   @Post(':id/moves')
-  public makeMove(
+  public async makeMove(
     @Request() request: AuthRequest,
     @Param('id') id: string,
     @Body() createMoveDto: CreateMoveDto,
   ): Promise<GameDto> {
     const user = request.user;
-    return this.gameService.makeMove(
-      id,
-      createMoveDto,
-      user,
-    ) as unknown as Promise<GameDto>;
+    const game = await this.gameService.makeMove(id, createMoveDto, user);
+    return plainToInstance(GameDto, game.toJSON());
   }
 
   @ApiCreatedResponse({
@@ -134,14 +137,12 @@ export class GameController {
     type: GameDto,
   })
   @Post(':id/claim-timeout')
-  public claimTimeout(
+  public async claimTimeout(
     @Request() request: AuthRequest,
     @Param('id') id: string,
   ): Promise<GameDto> {
     const user = request.user;
-    return this.gameService.claimTimeout(
-      id,
-      user,
-    ) as unknown as Promise<GameDto>;
+    const game = await this.gameService.claimTimeout(id, user);
+    return plainToInstance(GameDto, game.toJSON());
   }
 }
