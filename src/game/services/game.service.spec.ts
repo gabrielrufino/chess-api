@@ -97,7 +97,9 @@ describe(GameService.name, () => {
     it('should throw NotFoundException if game not found', async () => {
       jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
       await expect(
-        service.makeMove('1', { move: 'e4' }, { sub: 'user1' } as any),
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -106,7 +108,9 @@ describe(GameService.name, () => {
         .spyOn(gameModel, 'findById')
         .mockResolvedValue({ whitePlayerId: 'player1' });
       await expect(
-        service.makeMove('1', { move: 'e4' }, { sub: 'user1' } as any),
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -117,7 +121,9 @@ describe(GameService.name, () => {
         status: GameStatusEnum.WAITING_PLAYER,
       });
       await expect(
-        service.makeMove('1', { move: 'e4' }, { sub: 'user1' } as any),
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -129,7 +135,9 @@ describe(GameService.name, () => {
       });
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
       await expect(
-        service.makeMove('1', { move: 'e4' }, { sub: 'user1' } as any),
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -143,7 +151,9 @@ describe(GameService.name, () => {
         _id: { toString: () => 'player2' },
       } as any);
       await expect(
-        service.makeMove('1', { move: 'e4' }, { sub: 'user1' } as any),
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -157,7 +167,9 @@ describe(GameService.name, () => {
         _id: { toString: () => 'player1' },
       } as any);
       await expect(
-        service.makeMove('1', { move: 'invalid' }, { sub: 'user1' } as any),
+        service.makeMove('1', { move: 'invalid' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -176,7 +188,7 @@ describe(GameService.name, () => {
       } as any);
       const result = await service.makeMove('1', { move: 'e4' }, {
         sub: 'user1',
-      } as any);
+      } as unknown as AuthUser);
       expect(result.fen).not.toBe(new Chess().fen());
       expect(mockSave).toHaveBeenCalled();
     });
@@ -200,7 +212,9 @@ describe(GameService.name, () => {
       } as any);
 
       await expect(
-        service.makeMove('1', { move: 'e4' }, { sub: 'user1' } as any),
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
       ).rejects.toThrow(BadRequestException);
       expect(gameMock.status).toBe(GameStatusEnum.TIMEOUT);
       expect(mockSave).toHaveBeenCalled();
