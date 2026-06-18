@@ -14,6 +14,7 @@ import {
   Delete,
   Request,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { PlayerService } from '../services/player.service';
@@ -59,9 +60,12 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Get(':id')
-  public async findOne(@Param('id') id: string): Promise<PlayerDto | null> {
+  public async findOne(@Param('id') id: string): Promise<PlayerDto> {
     const player = await this.playerService.findOne(id);
-    return player ? plainToInstance(PlayerDto, player.toJSON()) : null;
+    if (!player) {
+      throw new NotFoundException(`Player with ID ${id} not found`);
+    }
+    return plainToInstance(PlayerDto, player.toJSON());
   }
 
   @ApiOkResponse({
@@ -82,8 +86,11 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Delete(':id')
-  public async remove(@Param('id') id: string): Promise<PlayerDto | null> {
+  public async remove(@Param('id') id: string): Promise<PlayerDto> {
     const player = await this.playerService.remove(id);
-    return player ? plainToInstance(PlayerDto, player.toJSON()) : null;
+    if (!player) {
+      throw new NotFoundException(`Player with ID ${id} not found`);
+    }
+    return plainToInstance(PlayerDto, player.toJSON());
   }
 }

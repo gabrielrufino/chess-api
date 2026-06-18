@@ -73,6 +73,7 @@ export class GameDto {
   updatedAt: Date;
 
   @Expose()
+  @Type(() => PlayerDto)
   @ApiPropertyOptional({
     type: () => PlayerDto,
     description: 'The populated white player details',
@@ -80,6 +81,7 @@ export class GameDto {
   whitePlayer?: PlayerDto;
 
   @Expose()
+  @Type(() => PlayerDto)
   @ApiPropertyOptional({
     type: () => PlayerDto,
     description: 'The populated black player details',
@@ -99,18 +101,24 @@ export class GameListDto {
   total: number;
 }
 
+@Exclude()
 export class GameDurationDto {
+  @Expose()
   @ApiProperty({ enum: GameDurationEnum, description: 'The duration value' })
   value: GameDurationEnum;
 
+  @Expose()
   @ApiProperty({ description: 'The display label for the duration' })
   label: string;
 }
 
+@Exclude()
 export class GameBoardDto {
+  @Expose()
   @ApiProperty({ description: 'The FEN string' })
   fen: string;
 
+  @Expose()
   @ApiProperty({
     description: 'The board representation',
     type: 'array',

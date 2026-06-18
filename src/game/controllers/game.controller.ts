@@ -7,6 +7,7 @@ import {
   Param,
   UseGuards,
   Request,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -79,9 +80,12 @@ export class GameController {
     type: GameDto,
   })
   @Get(':id')
-  public async findOne(@Param('id') id: string): Promise<GameDto | null> {
+  public async findOne(@Param('id') id: string): Promise<GameDto> {
     const game = await this.gameService.findOne(id);
-    return game ? plainToInstance(GameDto, game.toJSON()) : null;
+    if (!game) {
+      throw new NotFoundException(`Game with ID ${id} not found`);
+    }
+    return plainToInstance(GameDto, game.toJSON());
   }
 
   @ApiOkResponse({
