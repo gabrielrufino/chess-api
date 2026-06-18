@@ -16,7 +16,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { CreatePlayerDto } from '../dto/create-player.dto';
 import { PlayerService } from '../services/player.service';
 import { UpdatePlayerDto } from '../dto/update-player.dto';
 import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
@@ -36,12 +35,9 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Post()
-  public async create(
-    @Request() request: AuthRequest,
-    @Body() createPlayerDto: CreatePlayerDto,
-  ): Promise<PlayerDto> {
+  public async create(@Request() request: AuthRequest): Promise<PlayerDto> {
     const user = request.user;
-    const player = await this.playerService.create(createPlayerDto, user);
+    const player = await this.playerService.create(user);
     return plainToInstance(PlayerDto, player.toJSON());
   }
 

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { GameStatusEnum } from '../enumerables/game-status.enum';
+import { PlayerDto } from '../../player/dto/player-response.dto';
 
 @Exclude()
 export class GameDto {
@@ -70,6 +71,20 @@ export class GameDto {
   @Expose()
   @ApiProperty({ description: 'Last update timestamp' })
   updatedAt: Date;
+
+  @Expose()
+  @ApiPropertyOptional({
+    type: () => PlayerDto,
+    description: 'The populated white player details',
+  })
+  whitePlayer?: PlayerDto;
+
+  @Expose()
+  @ApiPropertyOptional({
+    type: () => PlayerDto,
+    description: 'The populated black player details',
+  })
+  blackPlayer?: PlayerDto;
 }
 
 @Exclude()
@@ -98,37 +113,14 @@ export class GameBoardDto {
 
   @ApiProperty({
     description: 'The board representation',
-    type: [Array],
+    type: 'array',
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+      },
+    },
     required: false,
   })
   board: any[][];
-}
-
-export class GameMoveDto {
-  @ApiProperty({ description: 'The move string' })
-  color: string;
-
-  @ApiProperty({ description: 'Piece' })
-  piece: string;
-
-  @ApiProperty({ description: 'From square' })
-  from: string;
-
-  @ApiProperty({ description: 'To square' })
-  to: string;
-
-  @ApiProperty({ description: 'SAN (Standard Algebraic Notation)' })
-  san: string;
-
-  @ApiProperty({ description: 'Flags' })
-  flags: string;
-
-  @ApiProperty({ description: 'LAN (Long Algebraic Notation)' })
-  lan: string;
-
-  @ApiPropertyOptional({ description: 'Captured piece' })
-  captured?: string;
-
-  @ApiPropertyOptional({ description: 'Promoted piece' })
-  promotion?: string;
 }

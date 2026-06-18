@@ -43,17 +43,16 @@ describe(PlayerController.name, () => {
   });
 
   it('should create a player', async () => {
-    const createPlayerDto = { nickname: 'test' };
     const request = {
       user: { sub: 'user-id', isGuest: true, username: 'test' },
     };
     const mockPlayer = { _id: '1', toJSON: () => ({ _id: '1' }) };
     jest.spyOn(service, 'create').mockResolvedValue(mockPlayer as any);
 
-    const result = await controller.create(request as any, createPlayerDto);
+    const result = await controller.create(request as any);
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(service.create).toHaveBeenCalledWith(createPlayerDto, request.user);
+    expect(service.create).toHaveBeenCalledWith(request.user);
     expect(result).toEqual(expect.objectContaining({ _id: '1' }));
   });
 

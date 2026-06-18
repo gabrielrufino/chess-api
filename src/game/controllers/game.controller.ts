@@ -27,7 +27,6 @@ import {
   GameListDto,
   GameDurationDto,
   GameBoardDto,
-  GameMoveDto,
 } from '../dto/game-response.dto';
 import { plainToInstance } from 'class-transformer';
 
@@ -109,12 +108,12 @@ export class GameController {
 
   @ApiOkResponse({
     description: 'Get list of moves of the game.',
-    type: [GameMoveDto],
+    type: [String],
   })
   @Get(':id/moves')
-  public async getMoves(@Param('id') id: string): Promise<GameMoveDto[]> {
+  public async getMoves(@Param('id') id: string): Promise<string[]> {
     const moves = await this.gameService.getMoves(id);
-    return plainToInstance(GameMoveDto, moves);
+    return moves;
   }
 
   @ApiCreatedResponse({

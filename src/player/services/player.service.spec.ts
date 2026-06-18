@@ -34,20 +34,19 @@ describe(PlayerService.name, () => {
   });
 
   it('should create a player', async () => {
-    const createPlayerDto = { nickname: 'test' };
     const authUser = { sub: 'user-id', isGuest: true, username: 'test' };
+    const mockPlayer = { userId: authUser.sub, isGuest: authUser.isGuest };
 
-    jest.spyOn(repository, 'create').mockResolvedValue(createPlayerDto as any);
+    jest.spyOn(repository, 'create').mockResolvedValue(mockPlayer as any);
 
-    const result = await service.create(createPlayerDto, authUser as any);
+    const result = await service.create(authUser as any);
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(repository.create).toHaveBeenCalledWith({
-      ...createPlayerDto,
       userId: authUser.sub,
       isGuest: authUser.isGuest,
     });
-    expect(result).toEqual(createPlayerDto);
+    expect(result).toEqual(mockPlayer);
   });
 
   it('should find all players', async () => {
