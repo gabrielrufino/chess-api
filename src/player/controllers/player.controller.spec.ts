@@ -56,6 +56,16 @@ describe(PlayerController.name, () => {
     expect(result).toEqual(expect.objectContaining({ _id: '1' }));
   });
 
+  it('should throw if playerService.create throws', async () => {
+    const request = {
+      user: { sub: 'user-id', isGuest: true, username: 'test' },
+    };
+    const error = new Error('Create failed');
+    jest.spyOn(service, 'create').mockRejectedValue(error);
+
+    await expect(controller.create(request as any)).rejects.toThrow(error);
+  });
+
   it('should find all players', async () => {
     const players = {
       data: [{ _id: '1', nickname: 'test', toJSON: () => ({ _id: '1' }) }],
@@ -81,6 +91,12 @@ describe(PlayerController.name, () => {
     expect(result).toEqual(expect.objectContaining({ _id: '1' }));
   });
 
+  it('should throw NotFoundException if player not found when finding one', async () => {
+    jest.spyOn(service, 'findOne').mockResolvedValue(null as any);
+
+    await expect(controller.findOne('1')).rejects.toThrow('Player with ID 1 not found');
+  });
+
   it('should update a player', () => {
     jest
       .spyOn(service, 'update')
@@ -104,5 +120,11 @@ describe(PlayerController.name, () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.remove).toHaveBeenCalledWith('1');
     expect(result).toEqual(expect.objectContaining({ _id: '1' }));
+  });
+
+  it('should throw NotFoundException if player not found when removing', async () => {
+    jest.spyOn(service, 'remove').mockResolvedValue(null as any);
+
+    await expect(controller.remove('1')).rejects.toThrow('Player with ID 1 not found');
   });
 });
