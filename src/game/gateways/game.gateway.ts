@@ -7,8 +7,8 @@ import {
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Server, Socket } from 'socket.io';
+import { isValidObjectId, Model } from 'mongoose';
+import type { Server, Socket } from 'socket.io';
 import { Chess } from 'chess.js';
 import { plainToInstance } from 'class-transformer';
 import { Game, GameDocument } from '../schemas/game.schema';
@@ -31,12 +31,12 @@ export class GameGateway {
     @MessageBody() gameId: string,
     @ConnectedSocket() client: Socket,
   ) {
-    if (!gameId) return { joined: false };
-
-    await client.join(gameId);
+    if (!gameId || !isValidObjectId(gameId)) return { joined: false };
 
     const game = await this.gameModel.findById(gameId);
     if (!game) return { joined: false };
+
+    await client.join(gameId);
 
     const chess = new Chess();
     try {
