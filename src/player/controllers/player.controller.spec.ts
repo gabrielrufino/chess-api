@@ -92,9 +92,12 @@ describe(PlayerController.name, () => {
   });
 
   it('should throw NotFoundException if player not found when finding one', async () => {
-    jest.spyOn(service, 'findOne').mockResolvedValue(null as any);
+    jest.spyOn(service, 'findOne').mockResolvedValue(null);
 
-    await expect(controller.findOne('1')).rejects.toThrow('Player with ID 1 not found');
+    await expect(controller.findOne('1')).rejects.toMatchObject({
+      message: 'Player with ID 1 not found',
+      status: 404,
+    });
   });
 
   it('should update a player', () => {
@@ -123,8 +126,11 @@ describe(PlayerController.name, () => {
   });
 
   it('should throw NotFoundException if player not found when removing', async () => {
-    jest.spyOn(service, 'remove').mockResolvedValue(null as any);
+    jest.spyOn(service, 'remove').mockResolvedValue(null);
 
-    await expect(controller.remove('1')).rejects.toThrow('Player with ID 1 not found');
+    await expect(controller.remove('1')).rejects.toMatchObject({
+      message: 'Player with ID 1 not found',
+      status: 404,
+    });
   });
 });
