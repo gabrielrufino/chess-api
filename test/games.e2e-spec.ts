@@ -4,6 +4,7 @@ import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import faker from '@faker-js/faker';
 import * as request from 'supertest';
+import { io, Socket } from 'socket.io-client';
 
 import { AuthModule } from '../src/auth/auth.module';
 import { AuthGuard } from '../src/auth/guards/auth.guard';
@@ -307,6 +308,74 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', player1Id)
         .send({ move: 'e4' })
         .expect(400); // Bad Request
+    });
+  });
+
+  describe('WebSockets', () => {
+    let ioClient: Socket;
+
+    afterEach(() => {
+      if (ioClient) {
+        ioClient.disconnect();
+      }
+    });
+
+    it('Should receive game-updated event when a move is made', (done) => {
+      app
+        .listen(0)
+        .then(async () => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+          const port = app.getHttpServer().address().port;
+
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          const { authUserId: player1Id } = await createPlayer(app);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+          const { authUserId: player2Id } = await createPlayer(app);
+
+          const res1 = await request(app.getHttpServer())
+            .post('/games')
+            .set('x-user-id', player1Id)
+            .send({ duration: GameDurationEnum.FiveMinutes });
+
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+          const gameId = res1.body._id;
+
+          await request(app.getHttpServer())
+            .post('/games')
+            .set('x-user-id', player2Id)
+            .send({ duration: GameDurationEnum.FiveMinutes });
+
+          ioClient = io(`http://127.0.0.1:${port}`, {
+            transports: ['websocket'],
+            forceNew: true,
+            reconnection: false,
+          });
+
+          let moveMade = false;
+
+          ioClient.on('game-updated', (payload: any) => {
+            if (!moveMade) return;
+
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            expect(payload.game).toBeDefined();
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            expect(payload.board).toBeDefined();
+            done();
+          });
+
+          ioClient.on('connect', () => {
+            ioClient.emit('join-game', gameId, () => {
+              moveMade = true;
+              void (async () => {
+                await request(app.getHttpServer())
+                  .post(`/games/${gameId}/moves`)
+                  .set('x-user-id', player1Id)
+                  .send({ move: 'e4' });
+              })();
+            });
+          });
+        })
+        .catch(done);
     });
   });
 });

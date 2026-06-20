@@ -9,16 +9,13 @@ const API_BASE_URL = isLocalhost
   : 'https://chess-api.gabrielrufino.com';
 // =============================================================================
 
-// ── Polling interval in milliseconds ──────────────────────────────────────────
-const POLL_INTERVAL_MS = 2000;
-
 // ── Application State ─────────────────────────────────────────────────────────
 const state = {
   token: null,       // JWT Bearer token
   playerId: null,    // MongoDB _id of the Player document
   gameId: null,      // MongoDB _id of the active Game document
   playerColor: null, // 'white' | 'black'
-  pollingTimer: null,
+  socket: null,      // socket.io instance
   chess: null,       // chess.js instance (client-side validation)
   board: null,       // chessboard.js instance
   gameData: null,    // latest game data from server
@@ -120,7 +117,7 @@ async function loadGameModes() {
   }
 }
 
-// ── Polling — Fetch current game state ────────────────────────────────────────
+// ── Fetch current game state (fallback / error recovery) ────────────────────
 async function fetchGameState() {
   try {
     const [game, boardData] = await Promise.all([
@@ -160,7 +157,7 @@ function handleGameUpdate(game, boardData) {
   }
 
   if (status === 'CHECKMATE') {
-    stopPolling();
+    stopWebSocket();
     // Determine winner
     const winnerIsWhite = state.chess.turn() === 'b'; // the player who just moved wins
     const iWon = (winnerIsWhite && state.playerColor === 'white') ||
@@ -170,7 +167,7 @@ function handleGameUpdate(game, boardData) {
   }
 
   if (status === 'TIMEOUT') {
-    stopPolling();
+    stopWebSocket();
     // In our current implementation, we know time ran out. 
     // We can infer who lost based on whose turn it was when time expired, or just show a generic timeout message.
     const myColor = state.playerColor === 'white' ? 'w' : 'b';
@@ -183,7 +180,7 @@ function handleGameUpdate(game, boardData) {
   }
 
   if (status === 'DRAW') {
-    stopPolling();
+    stopWebSocket();
     setStatus('🤝 Game ended in a draw.', 'over');
     return;
   }
@@ -271,8 +268,6 @@ async function onDrop(source, target) {
       method: 'POST',
       body: JSON.stringify({ move: move.san }),
     });
-    // Immediately poll to reflect the new state
-    await fetchGameState();
   } catch (err) {
     setStatus(`Move error: ${err.message}`, 'error');
     return 'snapback';
@@ -302,20 +297,33 @@ function initBoard(orientation) {
   window.addEventListener('resize', () => state.board.resize());
 }
 
-// ── Polling lifecycle ─────────────────────────────────────────────────────────
-function startPolling() {
-  fetchGameState(); // immediate first call
-  state.pollingTimer = setInterval(fetchGameState, POLL_INTERVAL_MS);
+// ── WebSocket lifecycle ───────────────────────────────────────────────────────
+function startWebSocket() {
+  if (!state.socket) {
+    state.socket = io(API_BASE_URL);
+
+    state.socket.on('connect', () => {
+      // The server will emit 'game-updated' with the current state as part of
+      // the join-game acknowledgement, so no extra HTTP fetch is needed.
+      state.socket.emit('join-game', state.gameId, () => {
+        // ACK: server confirmed the join and already pushed the initial state.
+      });
+    });
+
+    state.socket.on('game-updated', (payload) => {
+      handleGameUpdate(payload.game, payload.board);
+    });
+  }
 
   if (!state.visualClockTimer) {
     state.visualClockTimer = setInterval(updateClocksVisuals, 100);
   }
 }
 
-function stopPolling() {
-  if (state.pollingTimer) {
-    clearInterval(state.pollingTimer);
-    state.pollingTimer = null;
+function stopWebSocket() {
+  if (state.socket) {
+    state.socket.disconnect();
+    state.socket = null;
   }
   if (state.visualClockTimer) {
     clearInterval(state.visualClockTimer);
@@ -427,9 +435,9 @@ async function enterGame() {
     $('my-name-label').textContent = `${name} (${state.playerColor})`;
     initBoard(state.playerColor);
 
-    // 7. Start polling
+    // 7. Start websocket
     setStatus('Connecting…', '');
-    startPolling();
+    startWebSocket();
 
   } catch (err) {
     showSetupError(err.message);
@@ -463,7 +471,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true;
     try {
       await apiFetch(`/games/${state.gameId}/claim-timeout`, { method: 'POST' });
-      await fetchGameState(); // Force immediate update
     } catch (err) {
       alert(`Could not claim timeout: ${err.message}`);
     } finally {

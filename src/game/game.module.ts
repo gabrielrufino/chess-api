@@ -5,6 +5,7 @@ import { PlayerModule } from 'src/player/player.module';
 import { GameController } from './controllers/game.controller';
 import { GameService } from './services/game.service';
 import { Game, GameSchema } from './schemas/game.schema';
+import { GameGateway } from './gateways/game.gateway';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { Game, GameSchema } from './schemas/game.schema';
     PlayerModule,
   ],
   controllers: [GameController],
-  providers: [GameService],
+  providers: [GameService, GameGateway],
   exports: [MongooseModule],
 })
 export class GameModule {}

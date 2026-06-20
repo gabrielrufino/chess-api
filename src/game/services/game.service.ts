@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 
 import { CreateGameDto } from '../dto/create-game.dto';
@@ -17,14 +18,20 @@ import { GameStatusEnum } from '../enumerables/game-status.enum';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { Chess } from 'chess.js';
 import { parseGameDuration } from '../utils/time-control.util';
+import { GameGateway } from '../gateways/game.gateway';
+import { plainToInstance } from 'class-transformer';
+import { GameDto } from '../dto/game-response.dto';
 
 @Injectable()
 export class GameService {
+  private readonly logger = new Logger(GameService.name);
+
   constructor(
     @InjectModel(Game.name)
     private readonly gameModel: Model<GameDocument>,
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>,
+    private readonly gameGateway: GameGateway,
   ) {}
 
   public async create(createGameDto: CreateGameDto, authUser: AuthUser) {
@@ -55,6 +62,7 @@ export class GameService {
     );
 
     if (gameWaitingPlayer) {
+      this.broadcastGameUpdate(gameWaitingPlayer);
       return gameWaitingPlayer;
     }
 
@@ -204,6 +212,7 @@ export class GameService {
           game.status = GameStatusEnum.TIMEOUT;
           game.whiteTimeRemainingMs = 0;
           await game.save();
+          this.broadcastGameUpdate(game);
           throw new BadRequestException('Time is up for White');
         }
         game.whiteTimeRemainingMs += game.incrementMs;
@@ -213,6 +222,7 @@ export class GameService {
           game.status = GameStatusEnum.TIMEOUT;
           game.blackTimeRemainingMs = 0;
           await game.save();
+          this.broadcastGameUpdate(game);
           throw new BadRequestException('Time is up for Black');
         }
         game.blackTimeRemainingMs += game.incrementMs;
@@ -239,6 +249,8 @@ export class GameService {
     }
 
     await game.save();
+
+    this.broadcastGameUpdate(game);
 
     return game;
   }
@@ -298,6 +310,7 @@ export class GameService {
         game.status = GameStatusEnum.TIMEOUT;
         game.whiteTimeRemainingMs = 0;
         await game.save();
+        this.broadcastGameUpdate(game);
         return game;
       }
     } else {
@@ -305,10 +318,31 @@ export class GameService {
         game.status = GameStatusEnum.TIMEOUT;
         game.blackTimeRemainingMs = 0;
         await game.save();
+        this.broadcastGameUpdate(game);
         return game;
       }
     }
 
     throw new BadRequestException('Time is not up yet');
+  }
+
+  private broadcastGameUpdate(game: GameDocument) {
+    try {
+      const chess = new Chess();
+      if (game.pgn) chess.loadPgn(game.pgn);
+      else if (game.fen) chess.load(game.fen);
+
+      const boardData = { fen: chess.fen(), board: chess.board() };
+      this.gameGateway.emitGameUpdated(
+        game._id.toString(),
+        plainToInstance(GameDto, game.toJSON()),
+        boardData,
+      );
+    } catch (err) {
+      this.logger.error(
+        'Failed to broadcast game update',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
   }
 }
