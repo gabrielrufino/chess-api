@@ -12,6 +12,7 @@ import { Chess } from 'chess.js';
 import { Model } from 'mongoose';
 import { Game, GameDocument } from '../schemas/game.schema';
 import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
+import { GameGateway } from '../gateways/game.gateway';
 
 describe(GameService.name, () => {
   let service: GameService;
@@ -40,6 +41,10 @@ describe(GameService.name, () => {
         {
           provide: getModelToken(Player.name),
           useValue: playerModel,
+        },
+        {
+          provide: GameGateway,
+          useValue: { emitGameUpdated: jest.fn() },
         },
       ],
     }).compile();
