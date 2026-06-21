@@ -95,10 +95,12 @@ export class GameService {
     }));
   }
 
-  public async findAll() {
+  public async findAll(skip: number = 0, limit: number = 10) {
     const total = await this.gameModel.countDocuments();
     const data = await this.gameModel
       .find()
+      .skip(skip)
+      .limit(limit)
       .populate('whitePlayer')
       .populate('blackPlayer');
 
