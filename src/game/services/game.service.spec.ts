@@ -66,6 +66,35 @@ describe(GameService.name, () => {
     });
   });
 
+  describe('findAll', () => {
+    it('should return a list of games with total count using skip and limit', async () => {
+      const mockGames = [{ _id: '1' }, { _id: '2' }];
+
+      const mockFind = jest.fn().mockReturnValue({
+        skip: jest.fn().mockReturnValue({
+          limit: jest.fn().mockReturnValue({
+            populate: jest.fn().mockReturnValue({
+              populate: jest.fn().mockResolvedValue(mockGames),
+            }),
+          }),
+        }),
+      });
+
+      const spyCount = jest
+        .spyOn(gameModel, 'countDocuments')
+        .mockResolvedValue(2);
+      const spyFind = jest
+        .spyOn(gameModel, 'find')
+        .mockImplementation(mockFind);
+
+      const result = await service.findAll(0, 10);
+
+      expect(spyCount).toHaveBeenCalled();
+      expect(spyFind).toHaveBeenCalled();
+      expect(result).toEqual({ data: mockGames, total: 2 });
+    });
+  });
+
   describe('getBoard', () => {
     it('should throw NotFoundException if game not found', async () => {
       jest.spyOn(gameModel, 'findById').mockResolvedValue(null);

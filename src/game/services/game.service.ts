@@ -95,12 +95,16 @@ export class GameService {
     }));
   }
 
-  public async findAll() {
-    const total = await this.gameModel.countDocuments();
-    const data = await this.gameModel
-      .find()
-      .populate('whitePlayer')
-      .populate('blackPlayer');
+  public async findAll(skip: number = 0, limit: number = 10) {
+    const [total, data] = await Promise.all([
+      this.gameModel.countDocuments(),
+      this.gameModel
+        .find()
+        .skip(skip)
+        .limit(limit)
+        .populate('whitePlayer')
+        .populate('blackPlayer'),
+    ]);
 
     return {
       data,

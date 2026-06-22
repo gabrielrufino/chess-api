@@ -8,6 +8,7 @@ import {
   UseGuards,
   Request,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -30,6 +31,7 @@ import {
   GameBoardDto,
 } from '../dto/game-response.dto';
 import { plainToInstance } from 'class-transformer';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Game')
 @ApiBearerAuth()
@@ -67,8 +69,11 @@ export class GameController {
     type: GameListDto,
   })
   @Get()
-  public async findAll(): Promise<GameListDto> {
-    const result = await this.gameService.findAll();
+  public async findAll(
+    @Query() paginationQuery: PaginationQueryDto,
+  ): Promise<GameListDto> {
+    const { skip, limit } = paginationQuery;
+    const result = await this.gameService.findAll(skip, limit);
     return plainToInstance(GameListDto, {
       data: result.data.map((game) => game.toJSON()),
       total: result.total,

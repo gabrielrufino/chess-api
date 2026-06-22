@@ -102,4 +102,19 @@ describe(GameController.name, () => {
     expect(service.getDurations).toHaveBeenCalled();
     expect(result).toEqual(durationsResult);
   });
+
+  it('should get all games with pagination', async () => {
+    const paginationQuery = { skip: 0, limit: 10 };
+    const mockGame = { _id: '1', toJSON: () => ({ _id: '1' }) };
+    const mockResult = { data: [mockGame], total: 1 };
+
+    jest.spyOn(service, 'findAll').mockResolvedValue(mockResult as any);
+
+    const result = await controller.findAll(paginationQuery);
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(service.findAll).toHaveBeenCalledWith(0, 10);
+    expect(result.data).toBeDefined();
+    expect(result.total).toBe(1);
+  });
 });
