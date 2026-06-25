@@ -13,6 +13,7 @@ import { Model } from 'mongoose';
 import { Game, GameDocument } from '../schemas/game.schema';
 import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
 import { GameGateway } from '../gateways/game.gateway';
+import { UpdateGameDto } from '../dto/update-game.dto';
 
 describe(GameService.name, () => {
   let service: GameService;
@@ -24,6 +25,7 @@ describe(GameService.name, () => {
       create: jest.fn(),
       findOne: jest.fn(),
       findById: jest.fn(),
+      findOneAndUpdate: jest.fn(),
       countDocuments: jest.fn(),
       find: jest.fn(),
     } as unknown as Model<GameDocument>;
@@ -56,7 +58,7 @@ describe(GameService.name, () => {
     expect(service).toBeDefined();
   });
 
-  describe('getDurations', () => {
+  describe(GameService.prototype.getDurations.name, () => {
     it('should return an array of duration objects with values and labels', () => {
       const result = service.getDurations();
       expect(Array.isArray(result)).toBeTruthy();
@@ -66,7 +68,66 @@ describe(GameService.name, () => {
     });
   });
 
-  describe('findAll', () => {
+  describe(GameService.prototype.create.name, () => {
+    const mockAuthUser = { sub: 'user1' } as AuthUser;
+
+    it('should throw NotFoundException if player not found', async () => {
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await expect(
+        service.create({ duration: 'unlimited' } as any, mockAuthUser),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should join an existing waiting game when one is available', async () => {
+      const mockPlayer = { _id: { toString: () => 'player1' } };
+      const mockWaitingGame = {
+        _id: { toString: () => 'game1' },
+        pgn: '',
+        fen: new Chess().fen(),
+        toJSON: () => ({ _id: 'game1' }),
+      };
+
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
+      jest
+        .spyOn(gameModel, 'findOneAndUpdate')
+        .mockResolvedValue(mockWaitingGame);
+
+      /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+      const result = await service.create(
+        { duration: 'unlimited' } as any,
+        mockAuthUser,
+      );
+      /* eslint-enable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+
+      expect(result).toEqual(mockWaitingGame);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(gameModel.findOneAndUpdate).toHaveBeenCalled();
+    });
+
+    it('should create a new game when no waiting game is found', async () => {
+      const mockPlayer = { _id: { toString: () => 'player1' } };
+      const mockNewGame = { _id: 'newGame1' };
+
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
+      jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(null);
+      jest.spyOn(gameModel, 'create').mockResolvedValue(mockNewGame as any);
+
+      /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+      const result = await service.create(
+        { duration: 'unlimited' } as any,
+        mockAuthUser,
+      );
+      /* eslint-enable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(gameModel.create).toHaveBeenCalled();
+      expect(result).toEqual(mockNewGame);
+    });
+  });
+
+  describe(GameService.prototype.findAll.name, () => {
     it('should return a list of games with total count using skip and limit', async () => {
       const mockGames = [{ _id: '1' }, { _id: '2' }];
 
@@ -95,7 +156,39 @@ describe(GameService.name, () => {
     });
   });
 
-  describe('getBoard', () => {
+  describe(GameService.prototype.findOne.name, () => {
+    it('should return a game by id', async () => {
+      const mockGame = { _id: 'game1', fen: new Chess().fen() };
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
+      const mockQuery = {
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(mockGame),
+        }),
+      };
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
+      jest
+        .spyOn(gameModel, 'findById')
+        .mockReturnValue(
+          mockQuery as unknown as ReturnType<typeof gameModel.findById>,
+        );
+
+      const result = await service.findOne('game1');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(gameModel.findById).toHaveBeenCalledWith('game1');
+      expect(result).toEqual(mockGame);
+    });
+  });
+
+  describe(GameService.prototype.update.name, () => {
+    it('should return a string with the updated game id', () => {
+      const dto = new UpdateGameDto();
+      const result = service.update('game1', dto);
+      expect(result).toBe('This action updates a #game1 game');
+    });
+  });
+
+  describe(GameService.prototype.getBoard.name, () => {
     it('should throw NotFoundException if game not found', async () => {
       jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
       await expect(service.getBoard('1')).rejects.toThrow(NotFoundException);
@@ -109,9 +202,16 @@ describe(GameService.name, () => {
       expect(result).toHaveProperty('fen');
       expect(result).toHaveProperty('board');
     });
+
+    it('should throw BadRequestException if FEN is invalid', async () => {
+      jest
+        .spyOn(gameModel, 'findById')
+        .mockResolvedValue({ fen: 'invalid-fen' });
+      await expect(service.getBoard('1')).rejects.toThrow(BadRequestException);
+    });
   });
 
-  describe('getMoves', () => {
+  describe(GameService.prototype.getMoves.name, () => {
     it('should throw NotFoundException if game not found', async () => {
       jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
       await expect(service.getMoves('1')).rejects.toThrow(NotFoundException);
@@ -125,9 +225,16 @@ describe(GameService.name, () => {
       expect(Array.isArray(moves)).toBeTruthy();
       expect(moves.length).toBeGreaterThan(0);
     });
+
+    it('should throw BadRequestException if FEN is invalid', async () => {
+      jest
+        .spyOn(gameModel, 'findById')
+        .mockResolvedValue({ fen: 'invalid-fen' });
+      await expect(service.getMoves('1')).rejects.toThrow(BadRequestException);
+    });
   });
 
-  describe('makeMove', () => {
+  describe(GameService.prototype.makeMove.name, () => {
     it('should throw NotFoundException if game not found', async () => {
       jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
       await expect(
@@ -227,7 +334,7 @@ describe(GameService.name, () => {
       expect(mockSave).toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException if time is up for current player', async () => {
+    it('should throw BadRequestException if time is up for white player', async () => {
       const mockSave = jest.fn();
       const gameMock = {
         whitePlayerId: { toString: () => 'player1' },
@@ -253,9 +360,70 @@ describe(GameService.name, () => {
       expect(gameMock.status).toBe(GameStatusEnum.TIMEOUT);
       expect(mockSave).toHaveBeenCalled();
     });
+
+    it('should throw BadRequestException if time is up for black player', async () => {
+      const mockSave = jest.fn();
+      // It's black's turn after e4
+      const chess = new Chess();
+      chess.move('e4');
+      const gameMock = {
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        status: GameStatusEnum.IN_PROGRESS,
+        fen: chess.fen(),
+        pgn: chess.pgn(),
+        lastMoveAt: new Date(Date.now() - 60000),
+        whiteTimeRemainingMs: 60000,
+        blackTimeRemainingMs: 30000, // Only 30 seconds left for black
+        incrementMs: 0,
+        save: mockSave,
+      };
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player2' },
+      } as any);
+
+      await expect(
+        service.makeMove('1', { move: 'e5' }, {
+          sub: 'user2',
+        } as unknown as AuthUser),
+      ).rejects.toThrow(BadRequestException);
+      expect(gameMock.status).toBe(GameStatusEnum.TIMEOUT);
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it('should set status to CHECKMATE when move results in checkmate', async () => {
+      // Fool's mate: f3, e5, g4 → Qh4#
+      const chess = new Chess();
+      chess.move('f3');
+      chess.move('e5');
+      chess.move('g4');
+
+      const mockSave = jest.fn();
+      const gameMock = {
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        status: GameStatusEnum.IN_PROGRESS,
+        fen: chess.fen(),
+        pgn: chess.pgn(),
+        save: mockSave,
+      };
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      // Black plays Qh4#
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player2' },
+      } as any);
+
+      const result = await service.makeMove('1', { move: 'Qh4' }, {
+        sub: 'user2',
+      } as unknown as AuthUser);
+
+      expect(result.status).toBe(GameStatusEnum.CHECKMATE);
+      expect(mockSave).toHaveBeenCalled();
+    });
   });
 
-  describe('claimTimeout', () => {
+  describe(GameService.prototype.claimTimeout.name, () => {
     const mockAuthUser = { sub: 'user1' } as AuthUser;
 
     it('should throw NotFoundException if game not found', async () => {
@@ -310,6 +478,23 @@ describe(GameService.name, () => {
       );
     });
 
+    it('should throw BadRequestException when game has no time control', async () => {
+      jest.spyOn(gameModel, 'findById').mockResolvedValue({
+        status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        fen: new Chess().fen(),
+        // lastMoveAt and timeRemainingMs not set
+      });
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player1' },
+      } as any);
+
+      await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
     it('should throw BadRequestException if time is not up yet', async () => {
       const gameMock = {
         status: GameStatusEnum.IN_PROGRESS,
@@ -330,7 +515,7 @@ describe(GameService.name, () => {
       );
     });
 
-    it('should set status to TIMEOUT and save if time is up', async () => {
+    it('should set status to TIMEOUT and save if white time is up', async () => {
       const mockSave = jest.fn();
       const gameMock = {
         status: GameStatusEnum.IN_PROGRESS,
@@ -348,6 +533,34 @@ describe(GameService.name, () => {
       } as any);
 
       const result = await service.claimTimeout('1', mockAuthUser);
+      expect(result.status).toBe(GameStatusEnum.TIMEOUT);
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it('should set status to TIMEOUT and save if black time is up', async () => {
+      const mockSave = jest.fn();
+      // After e4 it's black's turn
+      const chess = new Chess();
+      chess.move('e4');
+      const gameMock = {
+        status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        fen: chess.fen(),
+        pgn: chess.pgn(),
+        lastMoveAt: new Date(Date.now() - 70000),
+        whiteTimeRemainingMs: 60000,
+        blackTimeRemainingMs: 60000,
+        save: mockSave,
+      };
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player2' },
+      } as any);
+
+      const result = await service.claimTimeout('1', {
+        sub: 'user2',
+      } as AuthUser);
       expect(result.status).toBe(GameStatusEnum.TIMEOUT);
       expect(mockSave).toHaveBeenCalled();
     });

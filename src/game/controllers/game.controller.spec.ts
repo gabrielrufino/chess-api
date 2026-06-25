@@ -25,6 +25,7 @@ describe(GameController.name, () => {
             getMoves: jest.fn(),
             makeMove: jest.fn(),
             getDurations: jest.fn(),
+            claimTimeout: jest.fn(),
           },
         },
         {
@@ -45,6 +46,27 @@ describe(GameController.name, () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+  });
+
+  describe(GameController.prototype.create.name, () => {
+    it('should create a game and return a GameDto', async () => {
+      const request = { user: { sub: 'user-id' } };
+      const createGameDto = { duration: GameDurationEnum.FiveMinutes };
+      const mockGame = {
+        _id: 'game1',
+        toJSON: () => ({
+          _id: 'game1',
+          duration: GameDurationEnum.FiveMinutes,
+        }),
+      };
+      jest.spyOn(service, 'create').mockResolvedValue(mockGame as any);
+
+      const result = await controller.create(request as any, createGameDto);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(service.create).toHaveBeenCalledWith(createGameDto, request.user);
+      expect(result).toEqual(expect.objectContaining({ _id: 'game1' }));
+    });
   });
 
   it('should get board', async () => {
@@ -116,5 +138,53 @@ describe(GameController.name, () => {
     expect(service.findAll).toHaveBeenCalledWith(0, 10);
     expect(result.data).toBeDefined();
     expect(result.total).toBe(1);
+  });
+
+  describe(GameController.prototype.findOne.name, () => {
+    it('should return a GameDto when game exists', async () => {
+      const mockGame = { _id: 'game1', toJSON: () => ({ _id: 'game1' }) };
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockGame as any);
+
+      const result = await controller.findOne('game1');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(service.findOne).toHaveBeenCalledWith('game1');
+      expect(result).toEqual(expect.objectContaining({ _id: 'game1' }));
+    });
+
+    it('should throw NotFoundException when game does not exist', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(null);
+
+      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+        'Game with ID nonexistent not found',
+      );
+    });
+  });
+
+  describe(GameController.prototype.update.name, () => {
+    it('should return the update result string', () => {
+      const updateResult = 'This action updates a #game1 game';
+      jest.spyOn(service, 'update').mockReturnValue(updateResult);
+
+      const result = controller.update('game1', {});
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(service.update).toHaveBeenCalledWith('game1', {});
+      expect(result).toBe(updateResult);
+    });
+  });
+
+  describe(GameController.prototype.claimTimeout.name, () => {
+    it('should claim timeout and return a GameDto', async () => {
+      const request = { user: { sub: 'user-id' } };
+      const mockGame = { _id: 'game1', toJSON: () => ({ _id: 'game1' }) };
+      jest.spyOn(service, 'claimTimeout').mockResolvedValue(mockGame as any);
+
+      const result = await controller.claimTimeout(request as any, 'game1');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(service.claimTimeout).toHaveBeenCalledWith('game1', request.user);
+      expect(result).toEqual(expect.objectContaining({ _id: 'game1' }));
+    });
   });
 });
