@@ -97,7 +97,7 @@ export class GameService {
 
   public async findAll(skip: number = 0, limit: number = 10) {
     const [total, data] = await Promise.all([
-      this.gameModel.countDocuments(),
+      this.gameModel.estimatedDocumentCount(),
       this.gameModel
         .find()
         .skip(skip)

@@ -26,7 +26,7 @@ describe(GameService.name, () => {
       findOne: jest.fn(),
       findById: jest.fn(),
       findOneAndUpdate: jest.fn(),
-      countDocuments: jest.fn(),
+      estimatedDocumentCount: jest.fn(),
       find: jest.fn(),
     } as unknown as Model<GameDocument>;
     playerModel = {
@@ -142,7 +142,7 @@ describe(GameService.name, () => {
       });
 
       const spyCount = jest
-        .spyOn(gameModel, 'countDocuments')
+        .spyOn(gameModel, 'estimatedDocumentCount')
         .mockResolvedValue(2);
       const spyFind = jest
         .spyOn(gameModel, 'find')
