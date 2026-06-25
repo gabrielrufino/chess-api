@@ -12,7 +12,9 @@ describe('AppController', () => {
       providers: [
         {
           provide: HealthCheckService,
-          useValue: {},
+          useValue: {
+            check: jest.fn().mockResolvedValue({ status: 'ok', details: {} }),
+          },
         },
       ],
     }).compile();
@@ -25,8 +27,9 @@ describe('AppController', () => {
   });
 
   describe('Health check', () => {
-    // it.skip('should return "Hello World!"', () => {
-    //   expect(appController.getHello()).toBe('Hello World!');
-    // });
+    it('should return health check result', async () => {
+      const result = await appController.check();
+      expect(result).toEqual({ status: 'ok', details: {} });
+    });
   });
 });
