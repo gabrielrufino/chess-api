@@ -74,7 +74,6 @@ describe(GameService.name, () => {
     it('should throw NotFoundException if player not found', async () => {
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await expect(
         service.create({ duration: 'unlimited' } as any, mockAuthUser),
       ).rejects.toThrow(NotFoundException);
@@ -94,12 +93,12 @@ describe(GameService.name, () => {
         .spyOn(gameModel, 'findOneAndUpdate')
         .mockResolvedValue(mockWaitingGame);
 
-      /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+      /* eslint-disable @typescript-eslint/no-unsafe-argument */
       const result = await service.create(
         { duration: 'unlimited' } as any,
         mockAuthUser,
       );
-      /* eslint-enable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+      /* eslint-enable @typescript-eslint/no-unsafe-argument */
 
       expect(result).toEqual(mockWaitingGame);
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -114,12 +113,12 @@ describe(GameService.name, () => {
       jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(null);
       jest.spyOn(gameModel, 'create').mockResolvedValue(mockNewGame as any);
 
-      /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+      /* eslint-disable @typescript-eslint/no-unsafe-argument */
       const result = await service.create(
         { duration: 'unlimited' } as any,
         mockAuthUser,
       );
-      /* eslint-enable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+      /* eslint-enable @typescript-eslint/no-unsafe-argument */
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(gameModel.create).toHaveBeenCalled();
@@ -159,13 +158,13 @@ describe(GameService.name, () => {
   describe(GameService.prototype.findOne.name, () => {
     it('should return a game by id', async () => {
       const mockGame = { _id: 'game1', fen: new Chess().fen() };
-      /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
+
       const mockQuery = {
         populate: jest.fn().mockReturnValue({
           populate: jest.fn().mockResolvedValue(mockGame),
         }),
       };
-      /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
+
       jest
         .spyOn(gameModel, 'findById')
         .mockReturnValue(
