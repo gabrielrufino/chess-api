@@ -103,7 +103,8 @@ export class GameService {
         .skip(skip)
         .limit(limit)
         .populate('whitePlayer')
-        .populate('blackPlayer'),
+        .populate('blackPlayer')
+        .lean(),
     ]);
 
     return {
