@@ -24,7 +24,7 @@ export class PlayerService {
   public async findAll() {
     const [total, players] = await Promise.all([
       this.playerModel.countDocuments({ deletedAt: null }),
-      this.playerModel.find({ deletedAt: null }),
+      this.playerModel.find({ deletedAt: null }).lean(),
     ]);
 
     return {
