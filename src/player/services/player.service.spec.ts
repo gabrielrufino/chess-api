@@ -52,7 +52,9 @@ describe(PlayerService.name, () => {
   it('should find all players', async () => {
     const players = [{ id: '1', nickname: 'test' }];
     jest.spyOn(repository, 'countDocuments').mockResolvedValue(1);
-    jest.spyOn(repository, 'find').mockResolvedValue(players as any);
+    jest.spyOn(repository, 'find').mockReturnValue({
+      lean: jest.fn().mockResolvedValue(players),
+    } as any);
 
     const result = await service.findAll();
 
