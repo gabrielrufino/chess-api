@@ -50,7 +50,7 @@ export class PlayerController {
   public async findAll(): Promise<PlayerListDto> {
     const result = await this.playerService.findAll();
     return plainToInstance(PlayerListDto, {
-      data: result.data.map((player) => player.toJSON()),
+      data: result.data,
       total: result.total,
     });
   }
@@ -65,7 +65,7 @@ export class PlayerController {
     if (!player) {
       throw new NotFoundException(`Player with ID ${id} not found`);
     }
-    return plainToInstance(PlayerDto, player.toJSON());
+    return plainToInstance(PlayerDto, player);
   }
 
   @ApiOkResponse({
