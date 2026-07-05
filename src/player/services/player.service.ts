@@ -34,7 +34,7 @@ export class PlayerService {
   }
 
   public async findOne(id: string) {
-    return this.playerModel.findById(id);
+    return this.playerModel.findById(id).lean();
   }
 
   public update(id: string) {

@@ -67,7 +67,9 @@ describe(PlayerService.name, () => {
 
   it('should find one player', async () => {
     const player = { id: '1', nickname: 'test' };
-    jest.spyOn(repository, 'findById').mockResolvedValue(player);
+    jest.spyOn(repository, 'findById').mockReturnValue({
+      lean: jest.fn().mockResolvedValue(player),
+    } as any);
 
     const result = await service.findOne('1');
 
