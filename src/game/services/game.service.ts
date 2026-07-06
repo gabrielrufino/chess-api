@@ -320,7 +320,7 @@ export class GameService {
     }
   }
 
-  private loadChessGame(game: GameDocument): Chess {
+  private loadChessGame(game: Pick<Game, 'pgn' | 'fen'>): Chess {
     const chess = new Chess();
     try {
       if (game.pgn) {
