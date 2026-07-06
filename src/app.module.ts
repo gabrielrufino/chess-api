@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TerminusModule } from '@nestjs/terminus';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CacheModule } from '@nestjs/cache-manager';
 import { LoggerModule } from 'nestjs-pino';
 
 import { AppController } from './app.controller';
@@ -14,6 +15,7 @@ import { GuestUserModule } from './guest-user/guest-user.module';
   imports: [
     ConfigModule.forRoot(),
     MongooseModule.forRoot(process.env.DATABASE_URL),
+    CacheModule.register({ isGlobal: true }),
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
