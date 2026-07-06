@@ -288,6 +288,7 @@ describe(GameService.name, () => {
         whitePlayerId: 'player1',
         blackPlayerId: 'player2',
         status: GameStatusEnum.IN_PROGRESS,
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       });
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
@@ -304,6 +305,7 @@ describe(GameService.name, () => {
         whitePlayerId: 'player1',
         blackPlayerId: 'player2',
         status: GameStatusEnum.IN_PROGRESS,
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       });
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
