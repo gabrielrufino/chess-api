@@ -22,22 +22,6 @@ import { GameGateway } from '../gateways/game.gateway';
 import { plainToInstance } from 'class-transformer';
 import { GameDto } from '../dto/game-response.dto';
 
-const GAME_DURATION_LABELS: Record<GameDurationEnum, string> = {
-  [GameDurationEnum.Unlimited]: 'Unlimited',
-  [GameDurationEnum.OneMinute]: '1 minute',
-  [GameDurationEnum.ThreePlusTwo]: '3 min + 2 sec',
-  [GameDurationEnum.FiveMinutes]: '5 minutes',
-  [GameDurationEnum.FivePlusThree]: '5 min + 3 sec',
-  [GameDurationEnum.TenMinutes]: '10 minutes',
-  [GameDurationEnum.TenPlusFive]: '10 min + 5 sec',
-  [GameDurationEnum.FifteenPlusTen]: '15 min + 10 sec',
-};
-
-const CACHED_GAME_DURATIONS = Object.values(GameDurationEnum).map((value) => ({
-  value,
-  label: GAME_DURATION_LABELS[value] || value,
-}));
-
 @Injectable()
 export class GameService {
   private readonly logger = new Logger(GameService.name);
@@ -94,7 +78,21 @@ export class GameService {
   }
 
   public getDurations() {
-    return CACHED_GAME_DURATIONS;
+    const labels: Record<GameDurationEnum, string> = {
+      [GameDurationEnum.Unlimited]: 'Unlimited',
+      [GameDurationEnum.OneMinute]: '1 minute',
+      [GameDurationEnum.ThreePlusTwo]: '3 min + 2 sec',
+      [GameDurationEnum.FiveMinutes]: '5 minutes',
+      [GameDurationEnum.FivePlusThree]: '5 min + 3 sec',
+      [GameDurationEnum.TenMinutes]: '10 minutes',
+      [GameDurationEnum.TenPlusFive]: '10 min + 5 sec',
+      [GameDurationEnum.FifteenPlusTen]: '15 min + 10 sec',
+    };
+
+    return Object.values(GameDurationEnum).map((value) => ({
+      value,
+      label: labels[value] || value,
+    }));
   }
 
   public async findAll(skip: number = 0, limit: number = 10) {
