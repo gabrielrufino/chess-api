@@ -327,6 +327,8 @@ export class GameService {
         chess.loadPgn(game.pgn);
       } else if (game.fen) {
         chess.load(game.fen);
+      } else {
+        throw new Error('No game state found');
       }
     } catch {
       throw new BadRequestException('Invalid or corrupted game state');
