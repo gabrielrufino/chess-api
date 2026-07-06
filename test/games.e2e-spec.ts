@@ -1,6 +1,7 @@
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
+import { CacheModule } from '@nestjs/cache-manager';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import faker from '@faker-js/faker';
 import * as request from 'supertest';
@@ -27,6 +28,7 @@ describe('GameModule (e2e)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         MongooseModule.forRoot(uri),
+        CacheModule.register({ isGlobal: true }),
         AuthModule,
         GameModule,
         PlayerModule,
