@@ -20,5 +20,8 @@
   },
   "transformIgnorePatterns": [
     "/node_modules/(?!(chess\\.js)/)"
+  ],
+  "modulePathIgnorePatterns": [
+    "<rootDir>/dist/"
   ]
 }

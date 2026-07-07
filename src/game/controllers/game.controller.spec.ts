@@ -1,5 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 import { GameController } from './game.controller';
 import { GameService } from '../services/game.service';
@@ -14,6 +15,13 @@ describe(GameController.name, () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [GameController],
       providers: [
+        {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+          },
+        },
         {
           provide: GameService,
           useValue: {

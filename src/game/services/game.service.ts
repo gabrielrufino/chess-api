@@ -131,12 +131,7 @@ export class GameService {
       throw new NotFoundException('Game not found');
     }
 
-    const chess = new Chess();
-    try {
-      chess.load(game.fen);
-    } catch {
-      throw new BadRequestException('Invalid or corrupted game FEN');
-    }
+    const chess = this.loadChessGame(game);
     return {
       fen: chess.fen(),
       board: chess.board(),
@@ -149,12 +144,7 @@ export class GameService {
       throw new NotFoundException('Game not found');
     }
 
-    const chess = new Chess();
-    try {
-      chess.load(game.fen);
-    } catch {
-      throw new BadRequestException('Invalid or corrupted game FEN');
-    }
+    const chess = this.loadChessGame(game);
     return chess.moves();
   }
 
@@ -181,17 +171,7 @@ export class GameService {
       throw new NotFoundException('Player not found');
     }
 
-    const chess = new Chess();
-    // In chess.js v1, load() and loadPgn() throw on invalid input
-    try {
-      if (game.pgn) {
-        chess.loadPgn(game.pgn);
-      } else if (game.fen) {
-        chess.load(game.fen);
-      }
-    } catch {
-      throw new BadRequestException('Corrupted game state');
-    }
+    const chess = this.loadChessGame(game);
 
     const turn = chess.turn(); // 'w' or 'b'
     const isWhiteTurn = turn === 'w';
@@ -287,16 +267,7 @@ export class GameService {
       throw new ForbiddenException('You are not a player in this game');
     }
 
-    const chess = new Chess();
-    try {
-      if (game.pgn) {
-        chess.loadPgn(game.pgn);
-      } else if (game.fen) {
-        chess.load(game.fen);
-      }
-    } catch {
-      throw new BadRequestException('Corrupted game state');
-    }
+    const chess = this.loadChessGame(game);
 
     const isWhiteTurn = chess.turn() === 'w';
 
@@ -333,9 +304,7 @@ export class GameService {
 
   private broadcastGameUpdate(game: GameDocument) {
     try {
-      const chess = new Chess();
-      if (game.pgn) chess.loadPgn(game.pgn);
-      else if (game.fen) chess.load(game.fen);
+      const chess = this.loadChessGame(game);
 
       const boardData = { fen: chess.fen(), board: chess.board() };
       this.gameGateway.emitGameUpdated(
@@ -349,5 +318,21 @@ export class GameService {
         err instanceof Error ? err.stack : String(err),
       );
     }
+  }
+
+  private loadChessGame(game: Pick<Game, 'pgn' | 'fen'>): Chess {
+    const chess = new Chess();
+    try {
+      if (game.pgn) {
+        chess.loadPgn(game.pgn);
+      } else if (game.fen) {
+        chess.load(game.fen);
+      } else {
+        throw new Error('No game state found');
+      }
+    } catch {
+      throw new BadRequestException('Invalid or corrupted game state');
+    }
+    return chess;
   }
 }

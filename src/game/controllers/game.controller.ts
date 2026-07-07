@@ -9,6 +9,7 @@ import {
   Request,
   NotFoundException,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,6 +18,7 @@ import {
   ApiCreatedResponse,
 } from '@nestjs/swagger';
 import { Public } from 'src/auth/decorators/public.decorator';
+import { CacheInterceptor, CacheKey } from '@nestjs/cache-manager';
 
 import { CreateGameDto } from '../dto/create-game.dto';
 import { CreateMoveDto } from '../dto/create-move.dto';
@@ -59,6 +61,8 @@ export class GameController {
     type: [GameDurationDto],
   })
   @Public()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('game_durations')
   @Get('durations')
   public getDurations(): GameDurationDto[] {
     return plainToInstance(GameDurationDto, this.gameService.getDurations());
