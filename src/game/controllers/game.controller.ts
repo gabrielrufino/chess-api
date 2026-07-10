@@ -34,6 +34,7 @@ import {
 } from '../dto/game-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ParseMongoIdPipe } from '../../common/pipes/parse-mongo-id.pipe';
 
 @ApiTags('Game')
 @ApiBearerAuth()
@@ -89,7 +90,9 @@ export class GameController {
     type: GameDto,
   })
   @Get(':id')
-  public async findOne(@Param('id') id: string): Promise<GameDto> {
+  public async findOne(
+    @Param('id', ParseMongoIdPipe) id: string,
+  ): Promise<GameDto> {
     const game = await this.gameService.findOne(id);
     if (!game) {
       throw new NotFoundException(`Game with ID ${id} not found`);
@@ -103,7 +106,7 @@ export class GameController {
   })
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseMongoIdPipe) id: string,
     @Body() updateGameDto: UpdateGameDto,
   ): string {
     return this.gameService.update(id, updateGameDto);
@@ -114,7 +117,9 @@ export class GameController {
     type: GameBoardDto,
   })
   @Get(':id/board')
-  public async getBoard(@Param('id') id: string): Promise<GameBoardDto> {
+  public async getBoard(
+    @Param('id', ParseMongoIdPipe) id: string,
+  ): Promise<GameBoardDto> {
     const board = await this.gameService.getBoard(id);
     return plainToInstance(GameBoardDto, board);
   }
@@ -124,7 +129,9 @@ export class GameController {
     type: [String],
   })
   @Get(':id/moves')
-  public async getMoves(@Param('id') id: string): Promise<string[]> {
+  public async getMoves(
+    @Param('id', ParseMongoIdPipe) id: string,
+  ): Promise<string[]> {
     const moves = await this.gameService.getMoves(id);
     return moves;
   }
@@ -136,7 +143,7 @@ export class GameController {
   @Post(':id/moves')
   public async makeMove(
     @Request() request: AuthRequest,
-    @Param('id') id: string,
+    @Param('id', ParseMongoIdPipe) id: string,
     @Body() createMoveDto: CreateMoveDto,
   ): Promise<GameDto> {
     const user = request.user;
@@ -151,7 +158,7 @@ export class GameController {
   @Post(':id/claim-timeout')
   public async claimTimeout(
     @Request() request: AuthRequest,
-    @Param('id') id: string,
+    @Param('id', ParseMongoIdPipe) id: string,
   ): Promise<GameDto> {
     const user = request.user;
     const game = await this.gameService.claimTimeout(id, user);
