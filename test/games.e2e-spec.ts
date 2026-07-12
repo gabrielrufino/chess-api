@@ -152,6 +152,21 @@ describe('GameModule (e2e)', () => {
     });
   });
 
+  describe('GET /games/:id', () => {
+    it('Should throw 400 Bad Request if invalid MongoDB ObjectId is provided', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { authUserId } = await createPlayer(app);
+
+      const res = await request(app.getHttpServer())
+        .get('/games/invalid-id')
+        .set('x-user-id', authUserId)
+        .expect(400);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(res.body.message).toBe('Invalid MongoDB ObjectId');
+    });
+  });
+
   describe('Play Game', () => {
     it('Should play a full game of chess until checkmate', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
