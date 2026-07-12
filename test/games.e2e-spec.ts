@@ -162,6 +162,7 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(400);
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res.body.message).toBe('Invalid MongoDB ObjectId');
     });
   });
