@@ -74,18 +74,24 @@ async function apiFetch(path, options = {}) {
 }
 
 // ── Step 1 — Create guest user ─────────────────────────────────────────────
-async function createGuestUser(name) {
+async function createGuestUser() {
   const data = await apiFetch('/guest-users', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({}),
   });
-  return data; // { id, name, token }
+  return data; // { id, token }
+}
+
+// ── Step 1b — Fetch nickname suggestion ───────────────────────────────────────
+async function fetchNicknameSuggestion() {
+  const data = await apiFetch('/players/nickname-suggestion');
+  return data.nickname; // string
 }
 
 // ── Step 2 — Register player ───────────────────────────────────────────────
-async function registerPlayer() {
-  const data = await apiFetch('/players', { method: 'POST', body: JSON.stringify({}) });
-  return data; // { _id, userId, isGuest, ... }
+async function registerPlayer(nickname) {
+  const data = await apiFetch('/players', { method: 'POST', body: JSON.stringify({ nickname }) });
+  return data; // { _id, userId, isGuest, nickname, ... }
 }
 
 // ── Step 3 — Create/join game ──────────────────────────────────────────────
@@ -402,20 +408,25 @@ function resolveColor(game) {
 // ── Main flow — called when user clicks "Enter game" ─────────────────────────
 async function enterGame() {
   const btn = $('join-btn');
-  const name = $('guest-name').value.trim();
+  const nickname = $('guest-name').value.trim();
   const duration = $('duration').value;
+
+  if (!nickname) {
+    showSetupError('Please enter a nickname.');
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = 'Connecting…';
   showSetupError('');
 
   try {
-    // 1. Guest user
-    const guest = await createGuestUser(name);
+    // 1. Guest user (no name required)
+    const guest = await createGuestUser();
     state.token = guest.token;
 
-    // 2. Register player
-    const player = await registerPlayer();
+    // 2. Register player with chosen nickname
+    const player = await registerPlayer(nickname);
     state.playerId = String(player._id);
 
     // 3. Join / create game
@@ -432,7 +443,7 @@ async function enterGame() {
     // 6. Init chessboard.js
     const myColorDot = $('my-color-dot');
     myColorDot.className = `color-dot ${state.playerColor}`;
-    $('my-name-label').textContent = `${name} (${state.playerColor})`;
+    $('my-name-label').textContent = `${nickname} (${state.playerColor})`;
     initBoard(state.playerColor);
 
     // 7. Start websocket
@@ -446,17 +457,35 @@ async function enterGame() {
   }
 }
 
-// ── Generate a random guest name ──────────────────────────────────────────────
-function generateGuestName() {
-  const adj = ['Swift', 'Bold', 'Calm', 'Dark', 'Iron', 'Sage', 'Wild'];
-  const noun = ['Knight', 'Bishop', 'Rook', 'Queen', 'King', 'Pawn'];
-  const num = Math.floor(Math.random() * 9000) + 1000;
-  return `${adj[Math.floor(Math.random() * adj.length)]}${noun[Math.floor(Math.random() * noun.length)]}${num}`;
+// ── Load a nickname suggestion from the API ───────────────────────────────────
+async function loadNicknameSuggestion() {
+  try {
+    // We need a temporary guest token to call the protected endpoint
+    // The endpoint is behind AuthGuard, so we create a guest first
+    const guest = await apiFetch('/guest-users', { method: 'POST', body: JSON.stringify({}) });
+    // Store temporarily to make the suggestion request
+    const prevToken = state.token;
+    state.token = guest.token;
+    const nickname = await fetchNicknameSuggestion();
+    state.token = prevToken; // restore (null until enterGame)
+    $('guest-name').value = nickname;
+  } catch {
+    // Fallback: generate locally using unique-names-generator if available, else timestamp
+    if (typeof uniqueNamesGenerator !== 'undefined') {
+      $('guest-name').value = uniqueNamesGenerator({
+        dictionaries: [adjectives, animals],
+        separator: '',
+        style: 'capital',
+      });
+    } else {
+      $('guest-name').value = `Guest${Date.now()}`;
+    }
+  }
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  $('guest-name').value = generateGuestName();
+  void loadNicknameSuggestion();
   $('join-btn').addEventListener('click', enterGame);
 
   const apiDocsLink = $('api-docs-link');

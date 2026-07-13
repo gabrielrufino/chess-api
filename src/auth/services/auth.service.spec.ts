@@ -29,19 +29,18 @@ describe(AuthService.name, () => {
 
   describe(AuthService.prototype.createGuestToken.name, () => {
     it('should return a signed JWT token for the guest user', async () => {
-      const params = { id: 'guest-id-1', name: 'Guest Player' };
+      const params = { id: 'guest-id-1' };
       const token = await service.createGuestToken(params);
 
       expect(token).toBe('mock-token');
     });
 
     it('should call jwtService.signAsync with correct payload', async () => {
-      await service.createGuestToken({ id: 'abc', name: 'Alice' });
+      await service.createGuestToken({ id: 'abc' });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(jwtService.signAsync).toHaveBeenCalledWith({
         sub: 'abc',
-        name: 'Alice',
         isGuest: true,
       });
     });

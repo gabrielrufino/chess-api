@@ -8,10 +8,6 @@ export class GuestUserDto {
   id: string;
 
   @Expose()
-  @ApiProperty({ description: 'The name of the guest user' })
-  name: string;
-
-  @Expose()
   @ApiProperty({ description: 'The authentication token for the guest user' })
   token: string;
 }

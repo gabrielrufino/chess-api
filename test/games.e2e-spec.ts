@@ -42,7 +42,7 @@ describe('GameModule (e2e)', () => {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           const userId = req.headers['x-user-id'] || faker.datatype.uuid();
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-          req.user = { sub: userId, isGuest: true, username: 'test' };
+          req.user = { sub: userId, isGuest: true };
           return true;
         },
       })

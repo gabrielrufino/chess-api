@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GuestUserController } from './guest-user.controller';
 import { GuestUserService } from '../services/guest-user.service';
-import { CreateGuestUserDto } from '../dto/create-guest-user.dto';
 import { GuestUserDto } from '../dto/guest-user-response.dto';
 
 describe(GuestUserController.name, () => {
@@ -31,15 +30,11 @@ describe(GuestUserController.name, () => {
 
   describe('createGuestUser', () => {
     it('should successfully create a guest user and return a GuestUserDto', async () => {
-      const createGuestUserDto: CreateGuestUserDto = {
-        name: 'Guest123',
-      };
       const expectedId = 'uuid-1234';
       const expectedToken = 'token.123';
 
       const mockServiceResponse = {
         id: expectedId,
-        name: 'Guest123',
         token: expectedToken,
       };
 
@@ -47,13 +42,12 @@ describe(GuestUserController.name, () => {
         .spyOn(service, 'createGuestUser')
         .mockResolvedValue(mockServiceResponse as any);
 
-      const result = await controller.createGuestUser(createGuestUserDto);
+      const result = await controller.createGuestUser();
 
-      expect(createGuestUserSpy).toHaveBeenCalledWith(createGuestUserDto);
+      expect(createGuestUserSpy).toHaveBeenCalled();
       expect(result).toBeInstanceOf(GuestUserDto);
       expect(result).toEqual({
         id: expectedId,
-        name: 'Guest123',
         token: expectedToken,
       });
     });

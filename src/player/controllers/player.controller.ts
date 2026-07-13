@@ -3,6 +3,8 @@ import {
   ApiTags,
   ApiOkResponse,
   ApiCreatedResponse,
+  ApiQuery,
+  ApiConflictResponse,
 } from '@nestjs/swagger';
 import {
   Controller,
@@ -15,13 +17,20 @@ import {
   Request,
   UseGuards,
   NotFoundException,
+  Query,
 } from '@nestjs/common';
 
 import { PlayerService } from '../services/player.service';
+import { CreatePlayerDto } from '../dto/create-player.dto';
 import { UpdatePlayerDto } from '../dto/update-player.dto';
+import { FindAllPlayersDto } from '../dto/find-all-players.dto';
 import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { PlayerDto, PlayerListDto } from '../dto/player-response.dto';
+import {
+  NicknameSuggestionDto,
+  PlayerDto,
+  PlayerListDto,
+} from '../dto/player-response.dto';
 import { plainToInstance } from 'class-transformer';
 
 @ApiTags('Player')
@@ -35,10 +44,16 @@ export class PlayerController {
     description: 'Player successfully created.',
     type: PlayerDto,
   })
+  @ApiConflictResponse({
+    description: 'Nickname is already taken.',
+  })
   @Post()
-  public async create(@Request() request: AuthRequest): Promise<PlayerDto> {
+  public async create(
+    @Request() request: AuthRequest,
+    @Body() createPlayerDto: CreatePlayerDto,
+  ): Promise<PlayerDto> {
     const user = request.user;
-    const player = await this.playerService.create(user);
+    const player = await this.playerService.create(user, createPlayerDto);
     return plainToInstance(PlayerDto, player.toJSON());
   }
 
@@ -46,13 +61,30 @@ export class PlayerController {
     description: 'List of players.',
     type: PlayerListDto,
   })
+  @ApiQuery({
+    name: 'nickname',
+    required: false,
+    description: 'Filter players by nickname (partial, case-insensitive)',
+  })
   @Get()
-  public async findAll(): Promise<PlayerListDto> {
-    const result = await this.playerService.findAll();
+  public async findAll(
+    @Query() query: FindAllPlayersDto,
+  ): Promise<PlayerListDto> {
+    const result = await this.playerService.findAll(query);
     return plainToInstance(PlayerListDto, {
       data: result.data,
       total: result.total,
     });
+  }
+
+  @ApiOkResponse({
+    description: 'A suggested available nickname.',
+    type: NicknameSuggestionDto,
+  })
+  @Get('nickname-suggestion')
+  public async suggestNickname(): Promise<NicknameSuggestionDto> {
+    const nickname = await this.playerService.suggestNickname();
+    return plainToInstance(NicknameSuggestionDto, { nickname });
   }
 
   @ApiOkResponse({

@@ -5,10 +5,9 @@ import { JwtService } from '@nestjs/jwt';
 export class AuthService {
   constructor(private readonly jwtService: JwtService) {}
 
-  public async createGuestToken(params: { id: string; name: string }) {
+  public async createGuestToken(params: { id: string }) {
     return this.jwtService.signAsync({
       sub: params.id,
-      name: params.name,
       isGuest: true,
     });
   }

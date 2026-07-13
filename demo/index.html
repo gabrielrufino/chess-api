@@ -33,6 +33,9 @@
   <!-- socket.io -->
   <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 
+  <!-- unique-names-generator (fallback nickname generation) -->
+  <script src="https://cdn.jsdelivr.net/npm/unique-names-generator@4.7.1/dist/index.umd.js"></script>
+
   <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
 
@@ -56,8 +59,8 @@
   <!-- ───── Setup screen ───── -->
   <div id="setup-screen" class="card">
     <div class="field">
-      <label for="guest-name">Your name</label>
-      <input id="guest-name" type="text" placeholder="Guest-..." autocomplete="off" />
+      <label for="guest-name">Your nickname</label>
+      <input id="guest-name" type="text" placeholder="Loading suggestion…" autocomplete="off" />
     </div>
     <div class="field">
       <label for="duration">Game duration</label>
