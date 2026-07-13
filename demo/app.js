@@ -470,16 +470,8 @@ async function loadNicknameSuggestion() {
     state.token = prevToken; // restore (null until enterGame)
     $('guest-name').value = nickname;
   } catch {
-    // Fallback: generate locally using unique-names-generator if available, else timestamp
-    if (typeof uniqueNamesGenerator !== 'undefined') {
-      $('guest-name').value = uniqueNamesGenerator({
-        dictionaries: [adjectives, animals],
-        separator: '',
-        style: 'capital',
-      });
-    } else {
-      $('guest-name').value = `Guest${Date.now()}`;
-    }
+    // Fallback: if API is unavailable, use a timestamp-based name
+    $('guest-name').value = `Guest${Date.now()}`;
   }
 }
 

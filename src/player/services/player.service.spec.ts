@@ -78,6 +78,34 @@ describe(PlayerService.name, () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(repository.create).not.toHaveBeenCalled();
     });
+
+    it('should throw NicknameAlreadyTakenException on MongoDB duplicate key error (race condition)', async () => {
+      const authUser = { sub: 'user-id', isGuest: true };
+      const createDto = { nickname: 'RacedNickname' };
+
+      // findOne returns null (passes the pre-check), but create fails with code 11000
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+      jest
+        .spyOn(repository, 'create')
+        .mockRejectedValue({ code: 11000 } as any);
+
+      await expect(service.create(authUser as any, createDto)).rejects.toThrow(
+        NicknameAlreadyTakenException,
+      );
+    });
+
+    it('should re-throw non-duplicate-key errors from create', async () => {
+      const authUser = { sub: 'user-id', isGuest: true };
+      const createDto = { nickname: 'SomeNickname' };
+      const dbError = new Error('Connection lost');
+
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+      jest.spyOn(repository, 'create').mockRejectedValue(dbError);
+
+      await expect(service.create(authUser as any, createDto)).rejects.toThrow(
+        dbError,
+      );
+    });
   });
 
   describe('findAll', () => {

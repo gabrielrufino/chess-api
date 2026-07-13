@@ -24,6 +24,7 @@ import { PlayerService } from '../services/player.service';
 import { CreatePlayerDto } from '../dto/create-player.dto';
 import { UpdatePlayerDto } from '../dto/update-player.dto';
 import { FindAllPlayersDto } from '../dto/find-all-players.dto';
+import { ParseMongoIdPipe } from 'src/common/pipes/parse-mongo-id.pipe';
 import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import {
@@ -92,7 +93,9 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Get(':id')
-  public async findOne(@Param('id') id: string): Promise<PlayerDto> {
+  public async findOne(
+    @Param('id', ParseMongoIdPipe) id: string,
+  ): Promise<PlayerDto> {
     const player = await this.playerService.findOne(id);
     if (!player) {
       throw new NotFoundException(`Player with ID ${id} not found`);
@@ -106,7 +109,7 @@ export class PlayerController {
   })
   @Patch(':id')
   public update(
-    @Param('id') id: string,
+    @Param('id', ParseMongoIdPipe) id: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Body() updatePlayerDto: UpdatePlayerDto,
   ): string {
@@ -118,7 +121,9 @@ export class PlayerController {
     type: PlayerDto,
   })
   @Delete(':id')
-  public async remove(@Param('id') id: string): Promise<PlayerDto> {
+  public async remove(
+    @Param('id', ParseMongoIdPipe) id: string,
+  ): Promise<PlayerDto> {
     const player = await this.playerService.remove(id);
     if (!player) {
       throw new NotFoundException(`Player with ID ${id} not found`);

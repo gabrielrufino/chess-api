@@ -31,13 +31,25 @@ export class PlayerService {
       throw new NicknameAlreadyTakenException(createPlayerDto.nickname);
     }
 
-    const player = await this.playerModel.create({
-      userId: authUser.sub,
-      isGuest: authUser.isGuest,
-      nickname: createPlayerDto.nickname,
-    });
+    try {
+      const player = await this.playerModel.create({
+        userId: authUser.sub,
+        isGuest: authUser.isGuest,
+        nickname: createPlayerDto.nickname,
+      });
 
-    return player;
+      return player;
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 11000
+      ) {
+        throw new NicknameAlreadyTakenException(createPlayerDto.nickname);
+      }
+      throw error;
+    }
   }
 
   public async findAll(query?: FindAllPlayersDto) {
