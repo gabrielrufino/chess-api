@@ -11,6 +11,9 @@ export class Player {
   @Prop({ required: true })
   isGuest: boolean;
 
+  @Prop({ unique: true, required: true, sparse: true })
+  nickname: string;
+
   @Prop()
   deletedAt?: Date;
 }

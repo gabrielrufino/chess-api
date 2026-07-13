@@ -42,7 +42,7 @@ describe('GameModule (e2e)', () => {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           const userId = req.headers['x-user-id'] || faker.datatype.uuid();
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-          req.user = { sub: userId, isGuest: true, username: 'test' };
+          req.user = { sub: userId, isGuest: true };
           return true;
         },
       })
@@ -149,6 +149,21 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', faker.datatype.uuid())
         .expect(200)
         .expect({ data: [], total: 0 });
+    });
+  });
+
+  describe('GET /games/:id', () => {
+    it('Should throw 400 Bad Request if invalid MongoDB ObjectId is provided', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const { authUserId } = await createPlayer(app);
+
+      const res = await request(app.getHttpServer())
+        .get('/games/invalid-id')
+        .set('x-user-id', authUserId)
+        .expect(400);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(res.body.message).toBe('Invalid MongoDB ObjectId');
     });
   });
 

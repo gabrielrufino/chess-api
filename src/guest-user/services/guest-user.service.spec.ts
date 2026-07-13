@@ -32,19 +32,16 @@ describe(GuestUserService.name, () => {
   });
 
   it('should create a guest user and return a token', async () => {
-    const createGuestUserDto = { name: 'Guest' };
     jest.spyOn(authService, 'createGuestToken').mockResolvedValue('mock-token');
 
-    const result = await service.createGuestUser(createGuestUserDto);
+    const result = await service.createGuestUser();
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(authService.createGuestToken).toHaveBeenCalledWith({
       id: 'mock-uuid',
-      name: 'Guest',
     });
     expect(result).toEqual({
       id: 'mock-uuid',
-      name: 'Guest',
       token: 'mock-token',
     });
   });

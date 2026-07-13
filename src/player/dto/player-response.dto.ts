@@ -18,6 +18,10 @@ export class PlayerDto {
   isGuest: boolean;
 
   @Expose()
+  @ApiProperty({ description: 'The unique nickname of the player' })
+  nickname: string;
+
+  @Expose()
   @ApiPropertyOptional({ description: 'Deletion timestamp, if deleted' })
   deletedAt?: Date;
 
@@ -40,4 +44,11 @@ export class PlayerListDto {
   @Expose()
   @ApiProperty({ description: 'Total number of players' })
   total: number;
+}
+
+@Exclude()
+export class NicknameSuggestionDto {
+  @Expose()
+  @ApiProperty({ description: 'A suggested available nickname' })
+  nickname: string;
 }

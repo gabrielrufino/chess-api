@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { CreateGuestUserDto } from '../dto/create-guest-user.dto';
 import { AuthService } from 'src/auth/services/auth.service';
 import { randomUUID } from 'crypto';
 
@@ -7,16 +6,12 @@ import { randomUUID } from 'crypto';
 export class GuestUserService {
   constructor(private readonly authService: AuthService) {}
 
-  public async createGuestUser(createGuestUserDto: CreateGuestUserDto) {
+  public async createGuestUser() {
     const id = randomUUID();
 
     return {
       id,
-      name: createGuestUserDto.name,
-      token: await this.authService.createGuestToken({
-        id,
-        name: createGuestUserDto.name,
-      }),
+      token: await this.authService.createGuestToken({ id }),
     };
   }
 }

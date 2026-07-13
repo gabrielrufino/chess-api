@@ -1,7 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { GuestUserService } from '../services/guest-user.service';
 import { ApiTags, ApiCreatedResponse } from '@nestjs/swagger';
-import { CreateGuestUserDto } from '../dto/create-guest-user.dto';
 import { GuestUserDto } from '../dto/guest-user-response.dto';
 import { plainToInstance } from 'class-transformer';
 
@@ -15,11 +14,8 @@ export class GuestUserController {
     type: GuestUserDto,
   })
   @Post()
-  public async createGuestUser(
-    @Body() createGuestUserDto: CreateGuestUserDto,
-  ): Promise<GuestUserDto> {
-    const guestUser =
-      await this.guestUserService.createGuestUser(createGuestUserDto);
+  public async createGuestUser(): Promise<GuestUserDto> {
+    const guestUser = await this.guestUserService.createGuestUser();
     return plainToInstance(GuestUserDto, guestUser);
   }
 }
