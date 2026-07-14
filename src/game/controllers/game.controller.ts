@@ -97,7 +97,7 @@ export class GameController {
     if (!game) {
       throw new NotFoundException(`Game with ID ${id} not found`);
     }
-    return plainToInstance(GameDto, game.toJSON());
+    return plainToInstance(GameDto, game);
   }
 
   @ApiOkResponse({
