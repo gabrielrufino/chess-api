@@ -139,7 +139,7 @@ export class GameService {
   }
 
   public async getMoves(id: string) {
-    const game = await this.gameModel.findById(id);
+    const game = await this.gameModel.findById(id).lean();
     if (!game) {
       throw new NotFoundException('Game not found');
     }
