@@ -66,7 +66,9 @@ describe(GameGateway.name, () => {
     });
 
     it('should return `{ joined: false }` when game is not found in database', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      } as any);
 
       const validObjectId = '507f1f77bcf86cd799439011';
       const result = await gateway.handleJoinGame(
@@ -82,11 +84,13 @@ describe(GameGateway.name, () => {
       const chess = new Chess();
       chess.move('e4');
       const mockGame = {
+        _id: 'game1',
         pgn: chess.pgn(),
         fen: chess.fen(),
-        toJSON: () => ({ _id: 'game1', pgn: chess.pgn(), fen: chess.fen() }),
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(mockGame);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockGame),
+      } as any);
 
       const validObjectId = '507f1f77bcf86cd799439011';
       const result = await gateway.handleJoinGame(
@@ -109,11 +113,13 @@ describe(GameGateway.name, () => {
     it('should join the room and emit game-updated when game found with only FEN (no PGN)', async () => {
       const chess = new Chess();
       const mockGame = {
+        _id: 'game1',
         pgn: '',
         fen: chess.fen(),
-        toJSON: () => ({ _id: 'game1', pgn: '', fen: chess.fen() }),
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(mockGame);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockGame),
+      } as any);
 
       const validObjectId = '507f1f77bcf86cd799439011';
       const result = await gateway.handleJoinGame(
@@ -131,11 +137,13 @@ describe(GameGateway.name, () => {
 
     it('should join and emit even if game state cannot be loaded (logs warning)', async () => {
       const mockGame = {
+        _id: 'game1',
         pgn: 'invalid-pgn',
         fen: 'invalid-fen',
-        toJSON: () => ({ _id: 'game1' }),
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(mockGame);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockGame),
+      } as any);
       const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
       const validObjectId = '507f1f77bcf86cd799439011';
@@ -152,11 +160,13 @@ describe(GameGateway.name, () => {
 
     it('should join and emit with default board when game has no pgn and no fen', async () => {
       const mockGame = {
+        _id: 'game1',
         pgn: null,
         fen: null,
-        toJSON: () => ({ _id: 'game1', pgn: null, fen: null }),
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(mockGame);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockGame),
+      } as any);
 
       const validObjectId = '507f1f77bcf86cd799439011';
       const result = await gateway.handleJoinGame(
