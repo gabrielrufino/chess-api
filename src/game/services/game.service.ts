@@ -117,7 +117,8 @@ export class GameService {
     return this.gameModel
       .findById(id)
       .populate('whitePlayer')
-      .populate('blackPlayer');
+      .populate('blackPlayer')
+      .lean();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

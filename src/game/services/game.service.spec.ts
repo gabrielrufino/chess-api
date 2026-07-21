@@ -163,7 +163,9 @@ describe(GameService.name, () => {
 
       const mockQuery = {
         populate: jest.fn().mockReturnValue({
-          populate: jest.fn().mockResolvedValue(mockGame),
+          populate: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue(mockGame),
+          }),
         }),
       };
 

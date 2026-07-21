@@ -9,7 +9,7 @@ export async function createPlayer(
   const authUserId = faker.datatype.uuid();
   const playerNickname =
     nickname ??
-    `${faker.name.firstName()}${Math.floor(Math.random() * 9000) + 1000}`;
+    `${faker.name.firstName()}${faker.datatype.uuid().replace(/-/g, '').slice(0, 8)}`;
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument
   const { body } = await request(app.getHttpServer())
