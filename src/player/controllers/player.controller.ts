@@ -18,6 +18,7 @@ import {
   UseGuards,
   NotFoundException,
   Query,
+  ForbiddenException,
 } from '@nestjs/common';
 
 import { PlayerService } from '../services/player.service';
@@ -122,12 +123,20 @@ export class PlayerController {
   })
   @Delete(':id')
   public async remove(
+    @Request() request: AuthRequest,
     @Param('id', ParseMongoIdPipe) id: string,
   ): Promise<PlayerDto> {
-    const player = await this.playerService.remove(id);
+    const player = await this.playerService.findOne(id);
     if (!player) {
       throw new NotFoundException(`Player with ID ${id} not found`);
     }
-    return plainToInstance(PlayerDto, player.toJSON());
+    if (player.userId !== request.user.sub) {
+      throw new ForbiddenException('You are not allowed to delete this player');
+    }
+    const removedPlayer = await this.playerService.remove(id);
+    if (!removedPlayer) {
+      throw new NotFoundException(`Player with ID ${id} not found`);
+    }
+    return plainToInstance(PlayerDto, removedPlayer.toJSON());
   }
 }

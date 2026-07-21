@@ -4,6 +4,7 @@ import { PlayerService } from '../services/player.service';
 import { AuthGuard } from '../../auth/guards/auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { NicknameAlreadyTakenException } from '../exceptions/nickname-already-taken.exception';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 describe(PlayerController.name, () => {
   let controller: PlayerController;
@@ -158,23 +159,52 @@ describe(PlayerController.name, () => {
 
   describe('remove', () => {
     it('should remove a player', async () => {
-      const mockPlayer = { _id: '1', toJSON: () => ({ _id: '1' }) };
+      const request = { user: { sub: 'user-id' } };
+      const mockPlayer = {
+        _id: '1',
+        userId: 'user-id',
+        toJSON: () => ({ _id: '1' }),
+      };
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockPlayer as any);
       jest.spyOn(service, 'remove').mockResolvedValue(mockPlayer as any);
 
-      const result = await controller.remove('1');
+      const result = await controller.remove(request as any, '1');
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(service.findOne).toHaveBeenCalledWith('1');
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(service.remove).toHaveBeenCalledWith('1');
       expect(result).toEqual(expect.objectContaining({ _id: '1' }));
     });
 
+    it('should throw ForbiddenException if player does not belong to the user', async () => {
+      const request = { user: { sub: 'another-user-id' } };
+      const mockPlayer = { _id: '1', userId: 'user-id' };
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockPlayer as any);
+
+      await expect(controller.remove(request as any, '1')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should throw NotFoundException if player not found initially', async () => {
+      const request = { user: { sub: 'user-id' } };
+      jest.spyOn(service, 'findOne').mockResolvedValue(null);
+
+      await expect(controller.remove(request as any, '1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
     it('should throw NotFoundException if player not found when removing', async () => {
+      const request = { user: { sub: 'user-id' } };
+      const mockPlayer = { _id: '1', userId: 'user-id' };
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockPlayer as any);
       jest.spyOn(service, 'remove').mockResolvedValue(null);
 
-      await expect(controller.remove('1')).rejects.toMatchObject({
-        message: 'Player with ID 1 not found',
-        status: 404,
-      });
+      await expect(controller.remove(request as any, '1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

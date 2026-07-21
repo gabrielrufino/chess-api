@@ -194,14 +194,14 @@ describe(GameService.name, () => {
   describe(GameService.prototype.getBoard.name, () => {
     it('should throw NotFoundException if game not found', async () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue(null)
+        lean: jest.fn().mockResolvedValue(null),
       } as any);
       await expect(service.getBoard('1')).rejects.toThrow(NotFoundException);
     });
 
     it('should return board and fen', async () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ fen: new Chess().fen() })
+        lean: jest.fn().mockResolvedValue({ fen: new Chess().fen() }),
       } as any);
       const result = await service.getBoard('1');
       expect(result).toHaveProperty('fen');
@@ -210,7 +210,7 @@ describe(GameService.name, () => {
 
     it('should throw BadRequestException if FEN is invalid', async () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ fen: 'invalid-fen' })
+        lean: jest.fn().mockResolvedValue({ fen: 'invalid-fen' }),
       } as any);
       await expect(service.getBoard('1')).rejects.toThrow(BadRequestException);
     });
@@ -219,14 +219,14 @@ describe(GameService.name, () => {
   describe(GameService.prototype.getMoves.name, () => {
     it('should throw NotFoundException if game not found', async () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue(null)
+        lean: jest.fn().mockResolvedValue(null),
       } as any);
       await expect(service.getMoves('1')).rejects.toThrow(NotFoundException);
     });
 
     it('should return available moves', async () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ fen: new Chess().fen() })
+        lean: jest.fn().mockResolvedValue({ fen: new Chess().fen() }),
       } as any);
       const moves = await service.getMoves('1');
       expect(Array.isArray(moves)).toBeTruthy();
@@ -235,7 +235,7 @@ describe(GameService.name, () => {
 
     it('should throw BadRequestException if FEN is invalid', async () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue({ fen: 'invalid-fen' })
+        lean: jest.fn().mockResolvedValue({ fen: 'invalid-fen' }),
       } as any);
       await expect(service.getMoves('1')).rejects.toThrow(BadRequestException);
     });
