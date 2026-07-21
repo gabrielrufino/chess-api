@@ -33,7 +33,7 @@ export class GameGateway {
   ) {
     if (!gameId || !isValidObjectId(gameId)) return { joined: false };
 
-    const game = await this.gameModel.findById(gameId).lean();
+    const game = await this.gameModel.findById(gameId).exec();
     if (!game) return { joined: false };
 
     await client.join(gameId);
@@ -52,7 +52,7 @@ export class GameGateway {
 
     const board: GameBoardDto = { fen: chess.fen(), board: chess.board() };
     client.emit('game-updated', {
-      game: plainToInstance(GameDto, game),
+      game: plainToInstance(GameDto, game.toJSON()),
       board,
     });
 

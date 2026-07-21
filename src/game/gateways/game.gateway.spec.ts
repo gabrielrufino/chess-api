@@ -67,7 +67,7 @@ describe(GameGateway.name, () => {
 
     it('should return `{ joined: false }` when game is not found in database', async () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue(null),
+        exec: jest.fn().mockResolvedValue(null),
       } as any);
 
       const validObjectId = '507f1f77bcf86cd799439011';
@@ -87,9 +87,10 @@ describe(GameGateway.name, () => {
         _id: 'game1',
         pgn: chess.pgn(),
         fen: chess.fen(),
+        toJSON: jest.fn().mockReturnValue({ _id: 'game1', pgn: chess.pgn(), fen: chess.fen() }),
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue(mockGame),
+        exec: jest.fn().mockResolvedValue(mockGame),
       } as any);
 
       const validObjectId = '507f1f77bcf86cd799439011';
@@ -116,9 +117,10 @@ describe(GameGateway.name, () => {
         _id: 'game1',
         pgn: '',
         fen: chess.fen(),
+        toJSON: jest.fn().mockReturnValue({ _id: 'game1', pgn: '', fen: chess.fen() }),
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue(mockGame),
+        exec: jest.fn().mockResolvedValue(mockGame),
       } as any);
 
       const validObjectId = '507f1f77bcf86cd799439011';
@@ -140,9 +142,10 @@ describe(GameGateway.name, () => {
         _id: 'game1',
         pgn: 'invalid-pgn',
         fen: 'invalid-fen',
+        toJSON: jest.fn().mockReturnValue({ _id: 'game1', pgn: 'invalid-pgn', fen: 'invalid-fen' }),
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue(mockGame),
+        exec: jest.fn().mockResolvedValue(mockGame),
       } as any);
       const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
@@ -163,9 +166,10 @@ describe(GameGateway.name, () => {
         _id: 'game1',
         pgn: null,
         fen: null,
+        toJSON: jest.fn().mockReturnValue({ _id: 'game1', pgn: null, fen: null }),
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
-        lean: jest.fn().mockResolvedValue(mockGame),
+        exec: jest.fn().mockResolvedValue(mockGame),
       } as any);
 
       const validObjectId = '507f1f77bcf86cd799439011';
