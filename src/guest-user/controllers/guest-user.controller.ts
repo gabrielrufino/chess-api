@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Controller, Post } from '@nestjs/common';
 import { GuestUserService } from '../services/guest-user.service';
 import { ApiTags, ApiCreatedResponse } from '@nestjs/swagger';
 import { GuestUserDto } from '../dto/guest-user-response.dto';
