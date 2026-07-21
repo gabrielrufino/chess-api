@@ -80,7 +80,7 @@ export class GameController {
     const { skip, limit } = paginationQuery;
     const result = await this.gameService.findAll(skip, limit);
     return plainToInstance(GameListDto, {
-      data: result.data.map((game) => game.toJSON()),
+      data: result.data,
       total: result.total,
     });
   }
