@@ -117,7 +117,8 @@ export class GameService {
     return this.gameModel
       .findById(id)
       .populate('whitePlayer')
-      .populate('blackPlayer');
+      .populate('blackPlayer')
+      .lean();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -126,7 +127,7 @@ export class GameService {
   }
 
   public async getBoard(id: string) {
-    const game = await this.gameModel.findById(id);
+    const game = await this.gameModel.findById(id).lean();
     if (!game) {
       throw new NotFoundException('Game not found');
     }
@@ -139,7 +140,7 @@ export class GameService {
   }
 
   public async getMoves(id: string) {
-    const game = await this.gameModel.findById(id);
+    const game = await this.gameModel.findById(id).lean();
     if (!game) {
       throw new NotFoundException('Game not found');
     }

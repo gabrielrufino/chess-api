@@ -135,7 +135,8 @@ describe(GameController.name, () => {
 
   it('should get all games with pagination', async () => {
     const paginationQuery = { skip: 0, limit: 10 };
-    const mockGame = { _id: '1', toJSON: () => ({ _id: '1' }) };
+    // lean() returns plain objects without toJSON — mock reflects that
+    const mockGame = { _id: '1', duration: GameDurationEnum.FiveMinutes };
     const mockResult = { data: [mockGame], total: 1 };
 
     jest.spyOn(service, 'findAll').mockResolvedValue(mockResult as any);
@@ -144,8 +145,9 @@ describe(GameController.name, () => {
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.findAll).toHaveBeenCalledWith(0, 10);
-    expect(result.data).toBeDefined();
     expect(result.total).toBe(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toEqual(expect.objectContaining({ _id: '1' }));
   });
 
   describe(GameController.prototype.findOne.name, () => {
