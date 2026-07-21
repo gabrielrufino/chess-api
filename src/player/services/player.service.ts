@@ -7,6 +7,7 @@ import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
 import { CreatePlayerDto } from '../dto/create-player.dto';
 import { FindAllPlayersDto } from '../dto/find-all-players.dto';
 import { NicknameAlreadyTakenException } from '../exceptions/nickname-already-taken.exception';
+import { escapeRegExp } from '../../common/utils/escape-regexp.util';
 import {
   uniqueNamesGenerator,
   adjectives,
@@ -56,7 +57,7 @@ export class PlayerService {
     const filter: Record<string, unknown> = { deletedAt: null };
 
     if (query?.nickname) {
-      filter.nickname = { $regex: query.nickname, $options: 'i' };
+      filter.nickname = { $regex: escapeRegExp(query.nickname), $options: 'i' };
     }
 
     const [total, players] = await Promise.all([
