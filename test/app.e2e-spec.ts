@@ -10,6 +10,7 @@ describe('AppModule (e2e)', () => {
   beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     process.env.DATABASE_URL = mongod.getUri();
+    process.env.JWT_SECRET = 'test-secret';
   });
 
   afterAll(async () => {
