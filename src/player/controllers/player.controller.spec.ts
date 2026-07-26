@@ -200,17 +200,17 @@ describe(PlayerController.name, () => {
       ).rejects.toThrow('Player with ID 1 not found');
     });
 
-    it('should throw ConflictException if nickname is already taken', async () => {
+    it('should throw NicknameAlreadyTakenException if nickname is already taken', async () => {
       const request = { user: { sub: 'user-id' } };
       const mockPlayer = { _id: '1', userId: 'user-id' };
       jest.spyOn(service, 'findOne').mockResolvedValue(mockPlayer as any);
       jest
         .spyOn(service, 'updateIfOwner')
-        .mockRejectedValue(new Error('duplicate'));
+        .mockRejectedValue(new NicknameAlreadyTakenException('TakenNick1234'));
 
       await expect(
         controller.update(request as any, '1', { nickname: 'TakenNick1234' }),
-      ).rejects.toThrow('Nickname is already taken');
+      ).rejects.toThrow(NicknameAlreadyTakenException);
     });
   });
 

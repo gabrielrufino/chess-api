@@ -19,7 +19,6 @@ import {
   UseGuards,
   NotFoundException,
   ForbiddenException,
-  ConflictException,
   Query,
 } from '@nestjs/common';
 
@@ -30,7 +29,6 @@ import { FindAllPlayersDto } from '../dto/find-all-players.dto';
 import { ParseMongoIdPipe } from 'src/common/pipes/parse-mongo-id.pipe';
 import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { PlayerDocument } from '../schemas/player.schema';
 import {
   NicknameSuggestionDto,
   PlayerDto,
@@ -132,16 +130,11 @@ export class PlayerController {
     }
     // Defensive check: handles the rare race condition where the player
     // was deleted between the findOne ownership check and this operation.
-    let updatedPlayer: PlayerDocument | null;
-    try {
-      updatedPlayer = await this.playerService.updateIfOwner(
-        id,
-        request.user.sub,
-        updatePlayerDto,
-      );
-    } catch {
-      throw new ConflictException('Nickname is already taken');
-    }
+    const updatedPlayer = await this.playerService.updateIfOwner(
+      id,
+      request.user.sub,
+      updatePlayerDto,
+    );
     if (!updatedPlayer) {
       throw new NotFoundException(`Player with ID ${id} not found`);
     }
