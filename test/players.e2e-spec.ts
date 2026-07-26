@@ -213,4 +213,158 @@ describe('PlayerModule (e2e)', () => {
       expect(listRes.body.total).toBe(0);
     });
   });
+  describe('DELETE /players/:id', () => {
+    it('should delete a player when requested by its owner', async () => {
+      const authUserId = faker.datatype.uuid();
+
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'DeleteMe1234' })
+        .expect(HttpStatus.CREATED);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const playerId = createRes.body._id as string;
+
+      const deleteRes = await client
+        .delete(`/players/${playerId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.OK);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(deleteRes.body._id).toBe(playerId);
+    });
+
+    it("should return 403 when a different user tries to delete another user's player (IDOR)", async () => {
+      const ownerUserId = faker.datatype.uuid();
+      const attackerUserId = faker.datatype.uuid();
+
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', ownerUserId)
+        .send({ nickname: 'OwnerPlayer4321' })
+        .expect(HttpStatus.CREATED);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const playerId = createRes.body._id as string;
+
+      // Attacker tries to delete owner's player
+      await client
+        .delete(`/players/${playerId}`)
+        .set('x-user-id', attackerUserId)
+        .expect(HttpStatus.FORBIDDEN);
+
+      // Player must still exist after the failed attempt
+      await client
+        .get(`/players/${playerId}`)
+        .set('x-user-id', ownerUserId)
+        .expect(HttpStatus.OK);
+    });
+
+    it('should return 404 when player does not exist', async () => {
+      const authUserId = faker.datatype.uuid();
+      const nonExistentId = '000000000000000000000001';
+
+      await client
+        .delete(`/players/${nonExistentId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.NOT_FOUND);
+    });
+  });
+
+  describe('PATCH /players/:id', () => {
+    it('should update a player when requested by its owner', async () => {
+      const authUserId = faker.datatype.uuid();
+
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'UpdateMe1234' })
+        .expect(HttpStatus.CREATED);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const playerId = createRes.body._id as string;
+
+      const updateRes = await client
+        .patch(`/players/${playerId}`)
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'UpdatedNick1234' })
+        .expect(HttpStatus.OK);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(updateRes.body._id).toBe(playerId);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(updateRes.body.nickname).toBe('UpdatedNick1234');
+    });
+
+    it("should return 403 when a different user tries to update another user's player (IDOR)", async () => {
+      const ownerUserId = faker.datatype.uuid();
+      const attackerUserId = faker.datatype.uuid();
+
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', ownerUserId)
+        .send({ nickname: 'ProtectedPlayer4321' })
+        .expect(HttpStatus.CREATED);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const playerId = createRes.body._id as string;
+
+      // Attacker tries to update owner's player
+      await client
+        .patch(`/players/${playerId}`)
+        .set('x-user-id', attackerUserId)
+        .send({ nickname: 'HackedNickname1234' })
+        .expect(HttpStatus.FORBIDDEN);
+
+      // Player nickname must remain unchanged
+      const getRes = await client
+        .get(`/players/${playerId}`)
+        .set('x-user-id', ownerUserId)
+        .expect(HttpStatus.OK);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(getRes.body.nickname).toBe('ProtectedPlayer4321');
+    });
+
+    it('should return 404 when player does not exist', async () => {
+      const authUserId = faker.datatype.uuid();
+      const nonExistentId = '000000000000000000000001';
+
+      await client
+        .patch(`/players/${nonExistentId}`)
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'NewNick1234' })
+        .expect(HttpStatus.NOT_FOUND);
+    });
+
+    it('should return 409 when new nickname is already taken', async () => {
+      const user1Id = faker.datatype.uuid();
+      const user2Id = faker.datatype.uuid();
+
+      // User 1 takes a nickname
+      await client
+        .post('/players')
+        .set('x-user-id', user1Id)
+        .send({ nickname: 'AlreadyTaken1234' })
+        .expect(HttpStatus.CREATED);
+
+      // User 2 creates their own player
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', user2Id)
+        .send({ nickname: 'MyPlayer5678' })
+        .expect(HttpStatus.CREATED);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const playerId = createRes.body._id as string;
+
+      // User 2 tries to rename to user 1's nickname
+      await client
+        .patch(`/players/${playerId}`)
+        .set('x-user-id', user2Id)
+        .send({ nickname: 'AlreadyTaken1234' })
+        .expect(HttpStatus.CONFLICT);
+    });
+  });
 });

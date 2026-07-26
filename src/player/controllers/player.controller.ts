@@ -5,6 +5,7 @@ import {
   ApiCreatedResponse,
   ApiQuery,
   ApiConflictResponse,
+  ApiForbiddenResponse,
 } from '@nestjs/swagger';
 import {
   Controller,
@@ -17,8 +18,9 @@ import {
   Request,
   UseGuards,
   NotFoundException,
-  Query,
   ForbiddenException,
+  ConflictException,
+  Query,
 } from '@nestjs/common';
 
 import { PlayerService } from '../services/player.service';
@@ -28,6 +30,7 @@ import { FindAllPlayersDto } from '../dto/find-all-players.dto';
 import { ParseMongoIdPipe } from 'src/common/pipes/parse-mongo-id.pipe';
 import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { PlayerDocument } from '../schemas/player.schema';
 import {
   NicknameSuggestionDto,
   PlayerDto,
@@ -106,20 +109,51 @@ export class PlayerController {
 
   @ApiOkResponse({
     description: 'Update a player by id.',
-    type: String,
+    type: PlayerDto,
+  })
+  @ApiConflictResponse({
+    description: 'Nickname is already taken.',
+  })
+  @ApiForbiddenResponse({
+    description: 'Authenticated user does not own this player.',
   })
   @Patch(':id')
-  public update(
+  public async update(
+    @Request() request: AuthRequest,
     @Param('id', ParseMongoIdPipe) id: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     @Body() updatePlayerDto: UpdatePlayerDto,
-  ): string {
-    return this.playerService.update(id);
+  ): Promise<PlayerDto> {
+    const player = await this.playerService.findOne(id);
+    if (!player) {
+      throw new NotFoundException(`Player with ID ${id} not found`);
+    }
+    if (player.userId !== request.user.sub) {
+      throw new ForbiddenException('You are not allowed to update this player');
+    }
+    // Defensive check: handles the rare race condition where the player
+    // was deleted between the findOne ownership check and this operation.
+    let updatedPlayer: PlayerDocument | null;
+    try {
+      updatedPlayer = await this.playerService.updateIfOwner(
+        id,
+        request.user.sub,
+        updatePlayerDto,
+      );
+    } catch {
+      throw new ConflictException('Nickname is already taken');
+    }
+    if (!updatedPlayer) {
+      throw new NotFoundException(`Player with ID ${id} not found`);
+    }
+    return plainToInstance(PlayerDto, updatedPlayer.toJSON());
   }
 
   @ApiOkResponse({
     description: 'Delete a player by id.',
     type: PlayerDto,
+  })
+  @ApiForbiddenResponse({
+    description: 'Authenticated user does not own this player.',
   })
   @Delete(':id')
   public async remove(
@@ -133,7 +167,12 @@ export class PlayerController {
     if (player.userId !== request.user.sub) {
       throw new ForbiddenException('You are not allowed to delete this player');
     }
-    const removedPlayer = await this.playerService.remove(id);
+    // Defensive check: handles the rare race condition where the player
+    // was deleted between the findOne ownership check and this operation.
+    const removedPlayer = await this.playerService.removeIfOwner(
+      id,
+      request.user.sub,
+    );
     if (!removedPlayer) {
       throw new NotFoundException(`Player with ID ${id} not found`);
     }

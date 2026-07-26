@@ -21,6 +21,7 @@ describe(PlayerService.name, () => {
             findOne: jest.fn(),
             findById: jest.fn(),
             findByIdAndUpdate: jest.fn(),
+            findOneAndUpdate: jest.fn(),
           },
         },
         PlayerService,
@@ -160,13 +161,6 @@ describe(PlayerService.name, () => {
     });
   });
 
-  describe('update', () => {
-    it('should update a player', () => {
-      const result = service.update('1');
-      expect(result).toBe('This action updates a #1 player');
-    });
-  });
-
   describe('remove', () => {
     it('should remove a player', async () => {
       jest
@@ -183,6 +177,41 @@ describe(PlayerService.name, () => {
       );
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       expect(result).toEqual({ id: '1', deletedAt: expect.any(Date) });
+    });
+  });
+
+  describe('removeIfOwner', () => {
+    it('should soft-delete and return the player when it belongs to the user', async () => {
+      const deletedAt = new Date();
+      const mockPlayer = { _id: '1', userId: 'user-id', deletedAt };
+      jest.spyOn(repository, 'findOneAndUpdate').mockResolvedValue(mockPlayer);
+
+      const result = await service.removeIfOwner('1', 'user-id');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(repository.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: '1', userId: 'user-id', deletedAt: null },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        { deletedAt: expect.any(Date) },
+        { new: true },
+      );
+      expect(result).toEqual(mockPlayer);
+    });
+
+    it('should return null when player does not belong to the user', async () => {
+      jest.spyOn(repository, 'findOneAndUpdate').mockResolvedValue(null);
+
+      const result = await service.removeIfOwner('1', 'another-user-id');
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when player does not exist', async () => {
+      jest.spyOn(repository, 'findOneAndUpdate').mockResolvedValue(null);
+
+      const result = await service.removeIfOwner('non-existent-id', 'user-id');
+
+      expect(result).toBeNull();
     });
   });
 
@@ -209,6 +238,61 @@ describe(PlayerService.name, () => {
 
       expect(findOneSpy).toHaveBeenCalledTimes(4);
       expect(typeof result).toBe('string');
+    });
+  });
+
+  describe('updateIfOwner', () => {
+    it('should update and return the player when it belongs to the user', async () => {
+      const updatedPlayer = {
+        _id: '1',
+        userId: 'user-id',
+        nickname: 'NewNick1234',
+      };
+      jest
+        .spyOn(repository, 'findOneAndUpdate')
+        .mockResolvedValue(updatedPlayer);
+
+      const result = await service.updateIfOwner('1', 'user-id', {
+        nickname: 'NewNick1234',
+      });
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(repository.findOneAndUpdate).toHaveBeenCalledWith(
+        { _id: '1', userId: 'user-id', deletedAt: null },
+        { $set: { nickname: 'NewNick1234' } },
+        { new: true, runValidators: true },
+      );
+      expect(result).toEqual(updatedPlayer);
+    });
+
+    it('should return null when player does not belong to the user', async () => {
+      jest.spyOn(repository, 'findOneAndUpdate').mockResolvedValue(null);
+
+      const result = await service.updateIfOwner('1', 'another-user-id', {
+        nickname: 'NewNick1234',
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should return null when player does not exist', async () => {
+      jest.spyOn(repository, 'findOneAndUpdate').mockResolvedValue(null);
+
+      const result = await service.updateIfOwner('non-existent-id', 'user-id', {
+        nickname: 'NewNick1234',
+      });
+
+      expect(result).toBeNull();
+    });
+
+    it('should throw NicknameAlreadyTakenException on MongoDB duplicate key error', async () => {
+      jest
+        .spyOn(repository, 'findOneAndUpdate')
+        .mockRejectedValue({ code: 11000 });
+
+      await expect(
+        service.updateIfOwner('1', 'user-id', { nickname: 'TakenNick1234' }),
+      ).rejects.toThrow(NicknameAlreadyTakenException);
     });
   });
 });
