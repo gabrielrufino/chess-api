@@ -69,6 +69,21 @@ describe(AuthGuard.name, () => {
     ]);
   });
 
+  it('should throw UnauthorizedException if headers object is missing', async () => {
+    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
+    const context = {
+      getHandler: jest.fn(),
+      getClass: jest.fn(),
+      switchToHttp: jest.fn().mockReturnValue({
+        getRequest: jest.fn().mockReturnValue({}),
+      }),
+    } as unknown as ExecutionContext;
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
   it('should throw UnauthorizedException if no token is provided', async () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
     const context = mockExecutionContext();
