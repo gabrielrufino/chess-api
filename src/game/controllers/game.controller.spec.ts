@@ -171,19 +171,6 @@ describe(GameController.name, () => {
     });
   });
 
-  describe(GameController.prototype.update.name, () => {
-    it('should return the update result string', () => {
-      const updateResult = 'This action updates a #game1 game';
-      jest.spyOn(service, 'update').mockReturnValue(updateResult);
-
-      const result = controller.update('game1', {});
-
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(service.update).toHaveBeenCalledWith('game1', {});
-      expect(result).toBe(updateResult);
-    });
-  });
-
   describe(GameController.prototype.claimTimeout.name, () => {
     it('should claim timeout and return a GameDto', async () => {
       const request = { user: { sub: 'user-id' } };

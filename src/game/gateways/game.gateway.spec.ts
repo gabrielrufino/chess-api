@@ -87,7 +87,11 @@ describe(GameGateway.name, () => {
         _id: 'game1',
         pgn: chess.pgn(),
         fen: chess.fen(),
-        toJSON: jest.fn().mockReturnValue({ _id: 'game1', pgn: chess.pgn(), fen: chess.fen() }),
+        toJSON: jest.fn().mockReturnValue({
+          _id: 'game1',
+          pgn: chess.pgn(),
+          fen: chess.fen(),
+        }),
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockGame),
@@ -117,7 +121,9 @@ describe(GameGateway.name, () => {
         _id: 'game1',
         pgn: '',
         fen: chess.fen(),
-        toJSON: jest.fn().mockReturnValue({ _id: 'game1', pgn: '', fen: chess.fen() }),
+        toJSON: jest
+          .fn()
+          .mockReturnValue({ _id: 'game1', pgn: '', fen: chess.fen() }),
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockGame),
@@ -142,7 +148,11 @@ describe(GameGateway.name, () => {
         _id: 'game1',
         pgn: 'invalid-pgn',
         fen: 'invalid-fen',
-        toJSON: jest.fn().mockReturnValue({ _id: 'game1', pgn: 'invalid-pgn', fen: 'invalid-fen' }),
+        toJSON: jest.fn().mockReturnValue({
+          _id: 'game1',
+          pgn: 'invalid-pgn',
+          fen: 'invalid-fen',
+        }),
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockGame),
@@ -166,7 +176,9 @@ describe(GameGateway.name, () => {
         _id: 'game1',
         pgn: null,
         fen: null,
-        toJSON: jest.fn().mockReturnValue({ _id: 'game1', pgn: null, fen: null }),
+        toJSON: jest
+          .fn()
+          .mockReturnValue({ _id: 'game1', pgn: null, fen: null }),
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockGame),

@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   UseGuards,
   Request,
@@ -23,7 +22,6 @@ import { CacheInterceptor, CacheKey } from '@nestjs/cache-manager';
 import { CreateGameDto } from '../dto/create-game.dto';
 import { CreateMoveDto } from '../dto/create-move.dto';
 import { GameService } from '../services/game.service';
-import { UpdateGameDto } from '../dto/update-game.dto';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
 import {
@@ -98,18 +96,6 @@ export class GameController {
       throw new NotFoundException(`Game with ID ${id} not found`);
     }
     return plainToInstance(GameDto, game);
-  }
-
-  @ApiOkResponse({
-    description: 'Update a game by id.',
-    type: String,
-  })
-  @Patch(':id')
-  update(
-    @Param('id', ParseMongoIdPipe) id: string,
-    @Body() updateGameDto: UpdateGameDto,
-  ): string {
-    return this.gameService.update(id, updateGameDto);
   }
 
   @ApiOkResponse({
