@@ -8,7 +8,6 @@ import {
 
 import { CreateGameDto } from '../dto/create-game.dto';
 import { CreateMoveDto } from '../dto/create-move.dto';
-import { UpdateGameDto } from '../dto/update-game.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Player, PlayerDocument } from 'src/player/schemas/player.schema';
@@ -119,11 +118,6 @@ export class GameService {
       .populate('whitePlayer')
       .populate('blackPlayer')
       .lean();
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  update(id: string, updateGameDto: UpdateGameDto) {
-    return `This action updates a #${id} game`;
   }
 
   public async getBoard(id: string) {
