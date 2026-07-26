@@ -19,6 +19,7 @@ describe('PlayerModule (e2e)', () => {
   beforeEach(async () => {
     mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();
+    process.env.JWT_SECRET = 'test-secret';
 
     const moduleRef = await Test.createTestingModule({
       imports: [
