@@ -61,6 +61,16 @@ export class PlayerController {
   }
 
   @ApiOkResponse({
+    description: 'Dismiss a suggested nickname reservation.',
+  })
+  @Delete('nickname-suggestion/:nickname')
+  public async dismissNicknameReservation(
+    @Param('nickname') nickname: string,
+  ): Promise<void> {
+    await this.playerService.dismissNicknameReservation(nickname);
+  }
+
+  @ApiOkResponse({
     description: 'List of players.',
     type: PlayerListDto,
   })

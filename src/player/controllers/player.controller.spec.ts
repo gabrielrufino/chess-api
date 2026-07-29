@@ -23,6 +23,7 @@ describe(PlayerController.name, () => {
             removeIfOwner: jest.fn(),
             updateIfOwner: jest.fn(),
             suggestNickname: jest.fn(),
+            dismissNicknameReservation: jest.fn(),
           },
         },
         {
@@ -118,6 +119,16 @@ describe(PlayerController.name, () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(service.suggestNickname).toHaveBeenCalled();
       expect(result).toEqual({ nickname: 'BoldRook5678' });
+    });
+  });
+
+  describe('dismissNicknameReservation', () => {
+    it('should dismiss a nickname suggestion', async () => {
+      const nickname = 'BoldRook5678';
+      await controller.dismissNicknameReservation(nickname);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(service.dismissNicknameReservation).toHaveBeenCalledWith(nickname);
     });
   });
 

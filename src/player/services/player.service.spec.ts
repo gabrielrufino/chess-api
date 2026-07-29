@@ -4,10 +4,13 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Player } from '../schemas/player.schema';
 import { Model } from 'mongoose';
 import { NicknameAlreadyTakenException } from '../exceptions/nickname-already-taken.exception';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 describe(PlayerService.name, () => {
   let service: PlayerService;
   let repository: Model<Player>;
+  let cacheManager: Cache;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,12 +27,21 @@ describe(PlayerService.name, () => {
             findOneAndUpdate: jest.fn(),
           },
         },
+        {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
+          },
+        },
         PlayerService,
       ],
     }).compile();
 
     service = module.get<PlayerService>(PlayerService);
     repository = module.get<Model<Player>>(getModelToken(Player.name));
+    cacheManager = module.get<Cache>(CACHE_MANAGER);
   });
 
   it('should be defined', () => {
@@ -62,6 +74,10 @@ describe(PlayerService.name, () => {
         isGuest: authUser.isGuest,
         nickname: createDto.nickname,
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        `nickname-reserve:${createDto.nickname}`,
+      );
       expect(result).toEqual(mockPlayer);
     });
 
@@ -216,16 +232,39 @@ describe(PlayerService.name, () => {
   });
 
   describe('suggestNickname', () => {
-    it('should return a nickname that is not already taken', async () => {
+    it('should return a nickname that is not already taken and reserve it', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
       jest.spyOn(repository, 'findOne').mockResolvedValue(null);
 
       const result = await service.suggestNickname();
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        `nickname-reserve:${result}`,
+        true,
+        300000,
+      );
+    });
+
+    it('should skip candidates that are reserved in cache', async () => {
+      jest
+        .spyOn(cacheManager, 'get')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValue(null);
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+
+      const result = await service.suggestNickname();
+
+      // Ensure cache get was called at least twice (one skipped, one available)
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cacheManager.get).toHaveBeenCalledTimes(2);
+      expect(typeof result).toBe('string');
     });
 
     it('should retry and return a different nickname when first candidates are taken', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
       const findOneSpy = jest
         .spyOn(repository, 'findOne')
         // First 3 attempts return existing player, 4th returns null
@@ -238,6 +277,17 @@ describe(PlayerService.name, () => {
 
       expect(findOneSpy).toHaveBeenCalledTimes(4);
       expect(typeof result).toBe('string');
+    });
+  });
+
+  describe('dismissNicknameReservation', () => {
+    it('should call cache manager to delete reservation', async () => {
+      await service.dismissNicknameReservation('some-nickname');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        'nickname-reserve:some-nickname',
+      );
     });
   });
 
@@ -261,6 +311,10 @@ describe(PlayerService.name, () => {
         { _id: '1', userId: 'user-id', deletedAt: null },
         { $set: { nickname: 'NewNick1234' } },
         { new: true, runValidators: true },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        'nickname-reserve:NewNick1234',
       );
       expect(result).toEqual(updatedPlayer);
     });

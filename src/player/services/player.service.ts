@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -22,6 +24,8 @@ export class PlayerService {
   constructor(
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   public async create(authUser: AuthUser, createPlayerDto: CreatePlayerDto) {
@@ -40,6 +44,10 @@ export class PlayerService {
         isGuest: authUser.isGuest,
         nickname: createPlayerDto.nickname,
       });
+
+      await this.cacheManager.del(
+        `nickname-reserve:${createPlayerDto.nickname}`,
+      );
 
       return player;
     } catch (error: unknown) {
@@ -103,11 +111,19 @@ export class PlayerService {
     updatePlayerDto: UpdatePlayerDto,
   ): Promise<PlayerDocument | null> {
     try {
-      return await this.playerModel.findOneAndUpdate(
+      const player = await this.playerModel.findOneAndUpdate(
         { _id: id, userId, deletedAt: null },
         { $set: updatePlayerDto },
         { new: true, runValidators: true },
       );
+
+      if (player && updatePlayerDto.nickname) {
+        await this.cacheManager.del(
+          `nickname-reserve:${updatePlayerDto.nickname}`,
+        );
+      }
+
+      return player;
     } catch (error: unknown) {
       if (
         typeof error === 'object' &&
@@ -144,17 +160,34 @@ export class PlayerService {
         style: 'capital',
       });
 
+      const isReserved = await this.cacheManager.get(
+        `nickname-reserve:${candidate}`,
+      );
+      if (isReserved) continue;
+
       const exists = await this.playerModel.findOne({
         nickname: candidate,
         deletedAt: null,
       });
 
       if (!exists) {
+        // Reserve for 5 minutes (300000ms)
+        await this.cacheManager.set(
+          `nickname-reserve:${candidate}`,
+          true,
+          300000,
+        );
         return candidate;
       }
     }
 
     // Fallback with timestamp to guarantee uniqueness
-    return `Guest${Date.now()}`;
+    const fallback = `Guest${Date.now()}`;
+    await this.cacheManager.set(`nickname-reserve:${fallback}`, true, 300000);
+    return fallback;
+  }
+
+  public async dismissNicknameReservation(nickname: string): Promise<void> {
+    await this.cacheManager.del(`nickname-reserve:${nickname}`);
   }
 }
