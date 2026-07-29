@@ -457,6 +457,20 @@ async function enterGame() {
   }
 }
 
+// ── Dismiss a nickname suggestion ─────────────────────────────────────────────
+async function dismissNicknameSuggestion(nickname) {
+  if (!nickname) return;
+  try {
+    const guest = await apiFetch('/guest-users', { method: 'POST', body: JSON.stringify({}) });
+    const prevToken = state.token;
+    state.token = guest.token;
+    await apiFetch(`/players/nickname-suggestion/${nickname}`, { method: 'DELETE' });
+    state.token = prevToken;
+  } catch {
+    // Ignore errors for dismissal
+  }
+}
+
 // ── Load a nickname suggestion from the API ───────────────────────────────────
 async function loadNicknameSuggestion() {
   try {
@@ -466,6 +480,13 @@ async function loadNicknameSuggestion() {
     // Store temporarily to make the suggestion request
     const prevToken = state.token;
     state.token = guest.token;
+
+    // Dismiss the old suggestion if one exists
+    const currentName = $('guest-name').value.trim();
+    if (currentName) {
+      await apiFetch(`/players/nickname-suggestion/${currentName}`, { method: 'DELETE' });
+    }
+
     const nickname = await fetchNicknameSuggestion();
     state.token = prevToken; // restore (null until enterGame)
     $('guest-name').value = nickname;
@@ -479,6 +500,15 @@ async function loadNicknameSuggestion() {
 document.addEventListener('DOMContentLoaded', () => {
   void loadNicknameSuggestion();
   $('join-btn').addEventListener('click', enterGame);
+  $('refresh-nickname-btn').addEventListener('click', () => {
+    const btn = $('refresh-nickname-btn');
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+    loadNicknameSuggestion().finally(() => {
+      btn.disabled = false;
+      btn.textContent = 'Refresh Nickname';
+    });
+  });
 
   const apiDocsLink = $('api-docs-link');
   if (apiDocsLink) {
