@@ -186,26 +186,28 @@ export class GameService {
       game.blackTimeRemainingMs !== undefined
     ) {
       const elapsedMs = now.getTime() - game.lastMoveAt.getTime();
+      const hasTimedOut = await this.checkAndHandleTimeout(
+        game,
+        isWhiteTurn,
+        elapsedMs,
+      );
+
+      if (hasTimedOut) {
+        throw new BadRequestException(
+          `Time is up for ${isWhiteTurn ? 'White' : 'Black'}`,
+        );
+      }
+
       if (isWhiteTurn) {
-        game.whiteTimeRemainingMs -= elapsedMs;
-        if (game.whiteTimeRemainingMs <= 0) {
-          game.status = GameStatusEnum.TIMEOUT;
-          game.whiteTimeRemainingMs = 0;
-          await game.save();
-          this.broadcastGameUpdate(game);
-          throw new BadRequestException('Time is up for White');
+        if (game.whiteTimeRemainingMs !== undefined) {
+          game.whiteTimeRemainingMs -= elapsedMs;
+          game.whiteTimeRemainingMs += game.incrementMs;
         }
-        game.whiteTimeRemainingMs += game.incrementMs;
       } else {
-        game.blackTimeRemainingMs -= elapsedMs;
-        if (game.blackTimeRemainingMs <= 0) {
-          game.status = GameStatusEnum.TIMEOUT;
-          game.blackTimeRemainingMs = 0;
-          await game.save();
-          this.broadcastGameUpdate(game);
-          throw new BadRequestException('Time is up for Black');
+        if (game.blackTimeRemainingMs !== undefined) {
+          game.blackTimeRemainingMs -= elapsedMs;
+          game.blackTimeRemainingMs += game.incrementMs;
         }
-        game.blackTimeRemainingMs += game.incrementMs;
       }
     }
 
@@ -275,26 +277,48 @@ export class GameService {
     }
 
     const elapsedMs = new Date().getTime() - game.lastMoveAt.getTime();
+    const hasTimedOut = await this.checkAndHandleTimeout(
+      game,
+      isWhiteTurn,
+      elapsedMs,
+    );
 
+    if (hasTimedOut) {
+      return game;
+    }
+
+    throw new BadRequestException('Time is not up yet');
+  }
+
+  private async checkAndHandleTimeout(
+    game: GameDocument,
+    isWhiteTurn: boolean,
+    elapsedMs: number,
+  ): Promise<boolean> {
     if (isWhiteTurn) {
-      if (game.whiteTimeRemainingMs - elapsedMs <= 0) {
+      if (
+        game.whiteTimeRemainingMs !== undefined &&
+        game.whiteTimeRemainingMs - elapsedMs <= 0
+      ) {
         game.status = GameStatusEnum.TIMEOUT;
         game.whiteTimeRemainingMs = 0;
         await game.save();
         this.broadcastGameUpdate(game);
-        return game;
+        return true;
       }
     } else {
-      if (game.blackTimeRemainingMs - elapsedMs <= 0) {
+      if (
+        game.blackTimeRemainingMs !== undefined &&
+        game.blackTimeRemainingMs - elapsedMs <= 0
+      ) {
         game.status = GameStatusEnum.TIMEOUT;
         game.blackTimeRemainingMs = 0;
         await game.save();
         this.broadcastGameUpdate(game);
-        return game;
+        return true;
       }
     }
-
-    throw new BadRequestException('Time is not up yet');
+    return false;
   }
 
   private broadcastGameUpdate(game: GameDocument) {
