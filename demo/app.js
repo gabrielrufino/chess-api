@@ -457,19 +457,6 @@ async function enterGame() {
   }
 }
 
-// ── Dismiss a nickname suggestion ─────────────────────────────────────────────
-async function dismissNicknameSuggestion(nickname) {
-  if (!nickname) return;
-  try {
-    const guest = await apiFetch('/guest-users', { method: 'POST', body: JSON.stringify({}) });
-    const prevToken = state.token;
-    state.token = guest.token;
-    await apiFetch(`/players/nickname-suggestion/${nickname}`, { method: 'DELETE' });
-    state.token = prevToken;
-  } catch {
-    // Ignore errors for dismissal
-  }
-}
 
 // ── Load a nickname suggestion from the API ───────────────────────────────────
 async function loadNicknameSuggestion() {
@@ -481,10 +468,15 @@ async function loadNicknameSuggestion() {
     const prevToken = state.token;
     state.token = guest.token;
 
-    // Dismiss the old suggestion if one exists
+    // Dismiss the old suggestion if one exists.
+    // We already hold guest.token at this point, so no new guest is needed.
     const currentName = $('guest-name').value.trim();
     if (currentName) {
-      await apiFetch(`/players/nickname-suggestion/${currentName}`, { method: 'DELETE' });
+      try {
+        await apiFetch(`/players/nickname-suggestion/${currentName}`, { method: 'DELETE' });
+      } catch {
+        // Ignore errors for dismissal — the reservation will expire automatically
+      }
     }
 
     const nickname = await fetchNicknameSuggestion();

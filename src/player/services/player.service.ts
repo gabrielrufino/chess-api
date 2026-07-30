@@ -46,7 +46,7 @@ export class PlayerService {
       });
 
       await this.cacheManager.del(
-        `nickname-reserve:${createPlayerDto.nickname}`,
+        this.nicknameReserveKey(createPlayerDto.nickname),
       );
 
       return player;
@@ -119,7 +119,7 @@ export class PlayerService {
 
       if (player && updatePlayerDto.nickname) {
         await this.cacheManager.del(
-          `nickname-reserve:${updatePlayerDto.nickname}`,
+          this.nicknameReserveKey(updatePlayerDto.nickname),
         );
       }
 
@@ -146,7 +146,7 @@ export class PlayerService {
     );
   }
 
-  public async suggestNickname(): Promise<string> {
+  public async suggestNickname(authUser: AuthUser): Promise<string> {
     const maxAttempts = 10;
     const numberDictionary = NumberDictionary.generate({
       min: 1000,
@@ -161,7 +161,7 @@ export class PlayerService {
       });
 
       const isReserved = await this.cacheManager.get(
-        `nickname-reserve:${candidate}`,
+        this.nicknameReserveKey(candidate),
       );
       if (isReserved) continue;
 
@@ -173,8 +173,8 @@ export class PlayerService {
       if (!exists) {
         // Reserve for 5 minutes (300000ms)
         await this.cacheManager.set(
-          `nickname-reserve:${candidate}`,
-          true,
+          this.nicknameReserveKey(candidate),
+          authUser.sub,
           300000,
         );
         return candidate;
@@ -183,11 +183,27 @@ export class PlayerService {
 
     // Fallback with timestamp to guarantee uniqueness
     const fallback = `Guest${Date.now()}`;
-    await this.cacheManager.set(`nickname-reserve:${fallback}`, true, 300000);
+    await this.cacheManager.set(
+      this.nicknameReserveKey(fallback),
+      authUser.sub,
+      300000,
+    );
     return fallback;
   }
 
-  public async dismissNicknameReservation(nickname: string): Promise<void> {
-    await this.cacheManager.del(`nickname-reserve:${nickname}`);
+  public async dismissNicknameReservation(
+    nickname: string,
+    userId: string,
+  ): Promise<void> {
+    const owner = await this.cacheManager.get<string>(
+      this.nicknameReserveKey(nickname),
+    );
+    // Only the user who reserved the nickname can dismiss it
+    if (owner !== null && owner !== userId) return;
+    await this.cacheManager.del(this.nicknameReserveKey(nickname));
+  }
+
+  private nicknameReserveKey(nickname: string): string {
+    return `nickname-reserve:${nickname}`;
   }
 }

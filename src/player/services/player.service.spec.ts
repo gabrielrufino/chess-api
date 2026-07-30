@@ -232,18 +232,20 @@ describe(PlayerService.name, () => {
   });
 
   describe('suggestNickname', () => {
+    const authUser = { sub: 'user-id', isGuest: true };
+
     it('should return a nickname that is not already taken and reserve it', async () => {
       jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
       jest.spyOn(repository, 'findOne').mockResolvedValue(null);
 
-      const result = await service.suggestNickname();
+      const result = await service.suggestNickname(authUser as any);
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(cacheManager.set).toHaveBeenCalledWith(
         `nickname-reserve:${result}`,
-        true,
+        authUser.sub,
         300000,
       );
     });
@@ -251,15 +253,15 @@ describe(PlayerService.name, () => {
     it('should skip candidates that are reserved in cache', async () => {
       jest
         .spyOn(cacheManager, 'get')
-        .mockResolvedValueOnce(true)
-        .mockResolvedValue(null);
+        .mockResolvedValueOnce('other-user-id') // first candidate reserved by another user
+        .mockResolvedValue(null);              // second candidate available
       jest.spyOn(repository, 'findOne').mockResolvedValue(null);
 
-      const result = await service.suggestNickname();
+      const result = await service.suggestNickname(authUser as any);
 
-      // Ensure cache get was called at least twice (one skipped, one available)
+      // Verify the second call resolved the available nickname
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(cacheManager.get).toHaveBeenCalledTimes(2);
+      expect(cacheManager.get).toHaveBeenCalledWith(`nickname-reserve:${result}`);
       expect(typeof result).toBe('string');
     });
 
@@ -273,7 +275,7 @@ describe(PlayerService.name, () => {
         .mockResolvedValueOnce({ nickname: 'taken3' } as any)
         .mockResolvedValueOnce(null);
 
-      const result = await service.suggestNickname();
+      const result = await service.suggestNickname(authUser as any);
 
       expect(findOneSpy).toHaveBeenCalledTimes(4);
       expect(typeof result).toBe('string');
@@ -281,13 +283,35 @@ describe(PlayerService.name, () => {
   });
 
   describe('dismissNicknameReservation', () => {
-    it('should call cache manager to delete reservation', async () => {
-      await service.dismissNicknameReservation('some-nickname');
+    it('should delete the reservation when caller is the owner', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue('user-id');
+
+      await service.dismissNicknameReservation('some-nickname', 'user-id');
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(cacheManager.del).toHaveBeenCalledWith(
         'nickname-reserve:some-nickname',
       );
+    });
+
+    it('should delete the reservation when no owner is stored (cache miss)', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
+
+      await service.dismissNicknameReservation('some-nickname', 'user-id');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        'nickname-reserve:some-nickname',
+      );
+    });
+
+    it('should NOT delete the reservation when caller is not the owner', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue('other-user-id');
+
+      await service.dismissNicknameReservation('some-nickname', 'user-id');
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(cacheManager.del).not.toHaveBeenCalled();
     });
   });
 

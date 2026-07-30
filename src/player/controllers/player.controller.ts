@@ -20,6 +20,7 @@ import {
   NotFoundException,
   ForbiddenException,
   Query,
+  HttpCode,
 } from '@nestjs/common';
 
 import { PlayerService } from '../services/player.service';
@@ -63,11 +64,16 @@ export class PlayerController {
   @ApiOkResponse({
     description: 'Dismiss a suggested nickname reservation.',
   })
+  @HttpCode(204)
   @Delete('nickname-suggestion/:nickname')
   public async dismissNicknameReservation(
+    @Request() request: AuthRequest,
     @Param('nickname') nickname: string,
   ): Promise<void> {
-    await this.playerService.dismissNicknameReservation(nickname);
+    await this.playerService.dismissNicknameReservation(
+      nickname,
+      request.user.sub,
+    );
   }
 
   @ApiOkResponse({
@@ -95,8 +101,10 @@ export class PlayerController {
     type: NicknameSuggestionDto,
   })
   @Get('nickname-suggestion')
-  public async suggestNickname(): Promise<NicknameSuggestionDto> {
-    const nickname = await this.playerService.suggestNickname();
+  public async suggestNickname(
+    @Request() request: AuthRequest,
+  ): Promise<NicknameSuggestionDto> {
+    const nickname = await this.playerService.suggestNickname(request.user);
     return plainToInstance(NicknameSuggestionDto, { nickname });
   }
 
