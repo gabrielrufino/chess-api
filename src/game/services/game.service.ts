@@ -148,7 +148,30 @@ export class GameService {
     createMoveDto: CreateMoveDto,
     authUser: AuthUser,
   ) {
-    const game = await this.gameModel.findById(id);
+    const rawGame = await this.gameModel.findById(id);
+    const game = this.validateGameForMove(rawGame);
+
+    const rawPlayer = await this.playerModel.findOne({ userId: authUser.sub });
+    if (!rawPlayer) {
+      throw new NotFoundException('Player not found');
+    }
+    const chess = this.loadChessGame(game);
+    const isWhiteTurn = chess.turn() === 'w';
+
+    this.validatePlayerTurn(game, rawPlayer, isWhiteTurn);
+
+    const now = new Date();
+    await this.handleTimeControl(game, isWhiteTurn, now);
+
+    this.updateGameState(game, chess, createMoveDto.move, now);
+
+    await game.save();
+    this.broadcastGameUpdate(game);
+
+    return game;
+  }
+
+  private validateGameForMove(game: GameDocument | null): GameDocument {
     if (!game) {
       throw new NotFoundException('Game not found');
     }
@@ -161,15 +184,17 @@ export class GameService {
       throw new BadRequestException('Game is not in progress');
     }
 
-    const player = await this.playerModel.findOne({ userId: authUser.sub });
+    return game;
+  }
+
+  private validatePlayerTurn(
+    game: GameDocument,
+    player: PlayerDocument | null,
+    isWhiteTurn: boolean,
+  ): void {
     if (!player) {
       throw new NotFoundException('Player not found');
     }
-
-    const chess = this.loadChessGame(game);
-
-    const turn = chess.turn(); // 'w' or 'b'
-    const isWhiteTurn = turn === 'w';
 
     const currentPlayerId = isWhiteTurn
       ? game.whitePlayerId.toString()
@@ -178,40 +203,53 @@ export class GameService {
     if (player._id.toString() !== currentPlayerId) {
       throw new ForbiddenException('Not your turn or you are not in this game');
     }
+  }
 
-    const now = new Date();
+  private async handleTimeControl(
+    game: GameDocument,
+    isWhiteTurn: boolean,
+    now: Date,
+  ): Promise<void> {
     if (
-      game.lastMoveAt &&
-      game.whiteTimeRemainingMs !== undefined &&
-      game.blackTimeRemainingMs !== undefined
+      !game.lastMoveAt ||
+      game.whiteTimeRemainingMs === undefined ||
+      game.blackTimeRemainingMs === undefined
     ) {
-      const elapsedMs = now.getTime() - game.lastMoveAt.getTime();
-      if (isWhiteTurn) {
-        game.whiteTimeRemainingMs -= elapsedMs;
-        if (game.whiteTimeRemainingMs <= 0) {
-          game.status = GameStatusEnum.TIMEOUT;
-          game.whiteTimeRemainingMs = 0;
-          await game.save();
-          this.broadcastGameUpdate(game);
-          throw new BadRequestException('Time is up for White');
-        }
-        game.whiteTimeRemainingMs += game.incrementMs;
-      } else {
-        game.blackTimeRemainingMs -= elapsedMs;
-        if (game.blackTimeRemainingMs <= 0) {
-          game.status = GameStatusEnum.TIMEOUT;
-          game.blackTimeRemainingMs = 0;
-          await game.save();
-          this.broadcastGameUpdate(game);
-          throw new BadRequestException('Time is up for Black');
-        }
-        game.blackTimeRemainingMs += game.incrementMs;
-      }
+      return;
     }
 
-    // In chess.js v1, move() throws InvalidMoveError instead of returning null
+    const elapsedMs = now.getTime() - game.lastMoveAt.getTime();
+    if (isWhiteTurn) {
+      game.whiteTimeRemainingMs -= elapsedMs;
+      if (game.whiteTimeRemainingMs <= 0) {
+        game.status = GameStatusEnum.TIMEOUT;
+        game.whiteTimeRemainingMs = 0;
+        await game.save();
+        this.broadcastGameUpdate(game);
+        throw new BadRequestException('Time is up for White');
+      }
+      game.whiteTimeRemainingMs += game.incrementMs;
+    } else {
+      game.blackTimeRemainingMs -= elapsedMs;
+      if (game.blackTimeRemainingMs <= 0) {
+        game.status = GameStatusEnum.TIMEOUT;
+        game.blackTimeRemainingMs = 0;
+        await game.save();
+        this.broadcastGameUpdate(game);
+        throw new BadRequestException('Time is up for Black');
+      }
+      game.blackTimeRemainingMs += game.incrementMs;
+    }
+  }
+
+  private updateGameState(
+    game: GameDocument,
+    chess: Chess,
+    move: string,
+    now: Date,
+  ): void {
     try {
-      chess.move(createMoveDto.move);
+      chess.move(move);
     } catch {
       throw new BadRequestException('Invalid move');
     }
@@ -227,12 +265,6 @@ export class GameService {
         game.status = GameStatusEnum.DRAW;
       }
     }
-
-    await game.save();
-
-    this.broadcastGameUpdate(game);
-
-    return game;
   }
 
   public async claimTimeout(id: string, authUser: AuthUser) {
