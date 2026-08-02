@@ -2,6 +2,7 @@ import {
   ApiBearerAuth,
   ApiTags,
   ApiOkResponse,
+  ApiNoContentResponse,
   ApiCreatedResponse,
   ApiQuery,
   ApiConflictResponse,
@@ -61,8 +62,8 @@ export class PlayerController {
     return plainToInstance(PlayerDto, player.toJSON());
   }
 
-  @ApiOkResponse({
-    description: 'Dismiss a suggested nickname reservation.',
+  @ApiNoContentResponse({
+    description: 'Nickname reservation dismissed successfully.',
   })
   @HttpCode(204)
   @Delete('nickname-suggestion/:nickname')

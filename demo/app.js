@@ -457,7 +457,6 @@ async function enterGame() {
   }
 }
 
-
 // ── Load a nickname suggestion from the API ───────────────────────────────────
 async function loadNicknameSuggestion() {
   try {

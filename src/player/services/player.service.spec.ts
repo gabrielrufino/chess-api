@@ -74,7 +74,7 @@ describe(PlayerService.name, () => {
         isGuest: authUser.isGuest,
         nickname: createDto.nickname,
       });
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(cacheManager.del).toHaveBeenCalledWith(
         `nickname-reserve:${createDto.nickname}`,
       );
@@ -242,7 +242,7 @@ describe(PlayerService.name, () => {
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(cacheManager.set).toHaveBeenCalledWith(
         `nickname-reserve:${result}`,
         authUser.sub,
@@ -254,14 +254,16 @@ describe(PlayerService.name, () => {
       jest
         .spyOn(cacheManager, 'get')
         .mockResolvedValueOnce('other-user-id') // first candidate reserved by another user
-        .mockResolvedValue(null);              // second candidate available
+        .mockResolvedValue(null); // second candidate available
       jest.spyOn(repository, 'findOne').mockResolvedValue(null);
 
       const result = await service.suggestNickname(authUser as any);
 
       // Verify the second call resolved the available nickname
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(cacheManager.get).toHaveBeenCalledWith(`nickname-reserve:${result}`);
+
+      expect(cacheManager.get).toHaveBeenCalledWith(
+        `nickname-reserve:${result}`,
+      );
       expect(typeof result).toBe('string');
     });
 
@@ -288,7 +290,6 @@ describe(PlayerService.name, () => {
 
       await service.dismissNicknameReservation('some-nickname', 'user-id');
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(cacheManager.del).toHaveBeenCalledWith(
         'nickname-reserve:some-nickname',
       );
@@ -299,7 +300,6 @@ describe(PlayerService.name, () => {
 
       await service.dismissNicknameReservation('some-nickname', 'user-id');
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(cacheManager.del).toHaveBeenCalledWith(
         'nickname-reserve:some-nickname',
       );
@@ -310,7 +310,6 @@ describe(PlayerService.name, () => {
 
       await service.dismissNicknameReservation('some-nickname', 'user-id');
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(cacheManager.del).not.toHaveBeenCalled();
     });
   });
@@ -336,7 +335,7 @@ describe(PlayerService.name, () => {
         { $set: { nickname: 'NewNick1234' } },
         { new: true, runValidators: true },
       );
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(cacheManager.del).toHaveBeenCalledWith(
         'nickname-reserve:NewNick1234',
       );

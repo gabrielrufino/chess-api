@@ -21,6 +21,7 @@ import {
 
 @Injectable()
 export class PlayerService {
+  private static readonly NICKNAME_RESERVATION_TTL_MS = 5 * 60 * 1000; // 5 minutes
   constructor(
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>,
@@ -171,11 +172,10 @@ export class PlayerService {
       });
 
       if (!exists) {
-        // Reserve for 5 minutes (300000ms)
         await this.cacheManager.set(
           this.nicknameReserveKey(candidate),
           authUser.sub,
-          300000,
+          PlayerService.NICKNAME_RESERVATION_TTL_MS,
         );
         return candidate;
       }
@@ -186,11 +186,17 @@ export class PlayerService {
     await this.cacheManager.set(
       this.nicknameReserveKey(fallback),
       authUser.sub,
-      300000,
+      PlayerService.NICKNAME_RESERVATION_TTL_MS,
     );
     return fallback;
   }
 
+  /**
+   * Dismisses a nickname reservation from the cache.
+   * If the reservation belongs to a different user, the request is silently
+   * ignored (privacy by design — callers cannot discover whether a nickname
+   * is reserved or by whom).
+   */
   public async dismissNicknameReservation(
     nickname: string,
     userId: string,

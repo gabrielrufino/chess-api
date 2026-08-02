@@ -214,10 +214,11 @@ export class GameService {
       return;
     }
 
-    const elapsedMs = now.getTime() - game.lastMoveAt.getTime();
+    const remaining = this.computeTimeRemaining(game, isWhiteTurn, now);
+
     if (isWhiteTurn) {
-      game.whiteTimeRemainingMs -= elapsedMs;
-      if (game.whiteTimeRemainingMs <= 0) {
+      game.whiteTimeRemainingMs = remaining;
+      if (remaining <= 0) {
         game.status = GameStatusEnum.TIMEOUT;
         game.whiteTimeRemainingMs = 0;
         await game.save();
@@ -226,8 +227,8 @@ export class GameService {
       }
       game.whiteTimeRemainingMs += game.incrementMs;
     } else {
-      game.blackTimeRemainingMs -= elapsedMs;
-      if (game.blackTimeRemainingMs <= 0) {
+      game.blackTimeRemainingMs = remaining;
+      if (remaining <= 0) {
         game.status = GameStatusEnum.TIMEOUT;
         game.blackTimeRemainingMs = 0;
         await game.save();
@@ -238,6 +239,10 @@ export class GameService {
     }
   }
 
+  /**
+   * Applies the move to the chess engine and mutates `game` in place,
+   * updating fen, pgn, lastMoveAt and status (if the game ended).
+   */
   private updateGameState(
     game: GameDocument,
     chess: Chess,
@@ -302,27 +307,38 @@ export class GameService {
       throw new BadRequestException('This game does not have a time control');
     }
 
-    const elapsedMs = new Date().getTime() - game.lastMoveAt.getTime();
+    const now = new Date();
+    const remaining = this.computeTimeRemaining(game, isWhiteTurn, now);
 
-    if (isWhiteTurn) {
-      if (game.whiteTimeRemainingMs - elapsedMs <= 0) {
-        game.status = GameStatusEnum.TIMEOUT;
+    if (remaining <= 0) {
+      game.status = GameStatusEnum.TIMEOUT;
+      if (isWhiteTurn) {
         game.whiteTimeRemainingMs = 0;
-        await game.save();
-        this.broadcastGameUpdate(game);
-        return game;
-      }
-    } else {
-      if (game.blackTimeRemainingMs - elapsedMs <= 0) {
-        game.status = GameStatusEnum.TIMEOUT;
+      } else {
         game.blackTimeRemainingMs = 0;
-        await game.save();
-        this.broadcastGameUpdate(game);
-        return game;
       }
+      await game.save();
+      this.broadcastGameUpdate(game);
+      return game;
     }
 
     throw new BadRequestException('Time is not up yet');
+  }
+
+  /**
+   * Computes the remaining time (in ms) for the current player after
+   * subtracting the elapsed time since the last move.
+   */
+  private computeTimeRemaining(
+    game: GameDocument,
+    isWhiteTurn: boolean,
+    now: Date,
+  ): number {
+    const elapsedMs = now.getTime() - game.lastMoveAt.getTime();
+    const currentTimeMs = isWhiteTurn
+      ? game.whiteTimeRemainingMs
+      : game.blackTimeRemainingMs;
+    return currentTimeMs - elapsedMs;
   }
 
   private broadcastGameUpdate(game: GameDocument) {
