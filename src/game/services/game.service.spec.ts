@@ -334,6 +334,30 @@ describe(GameService.name, () => {
       expect(mockSave).toHaveBeenCalled();
     });
 
+    it('should execute move successfully when game has no time control (unlimited)', async () => {
+      const mockSave = jest.fn();
+      const gameMock = {
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        status: GameStatusEnum.IN_PROGRESS,
+        fen: new Chess().fen(),
+        // lastMoveAt, whiteTimeRemainingMs, blackTimeRemainingMs intentionally absent
+        save: mockSave,
+      };
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player1' },
+      } as any);
+
+      const result = await service.makeMove('1', { move: 'e4' }, {
+        sub: 'user1',
+      } as unknown as AuthUser);
+
+      // Move should succeed — time control is skipped via early-return
+      expect(result.fen).not.toBe(new Chess().fen());
+      expect(mockSave).toHaveBeenCalled();
+    });
+
     it('should throw BadRequestException if time is up for white player', async () => {
       const mockSave = jest.fn();
       const gameMock = {

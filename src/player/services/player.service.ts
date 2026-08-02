@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -9,6 +11,7 @@ import { UpdatePlayerDto } from '../dto/update-player.dto';
 import { FindAllPlayersDto } from '../dto/find-all-players.dto';
 import { WithId } from 'mongodb';
 import { NicknameAlreadyTakenException } from '../exceptions/nickname-already-taken.exception';
+import { escapeRegExp } from '../../common/utils/escape-regexp.util';
 import {
   uniqueNamesGenerator,
   adjectives,
@@ -18,9 +21,12 @@ import {
 
 @Injectable()
 export class PlayerService {
+  private static readonly NICKNAME_RESERVATION_TTL_MS = 5 * 60 * 1000; // 5 minutes
   constructor(
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {}
 
   public async create(authUser: AuthUser, createPlayerDto: CreatePlayerDto) {
@@ -40,6 +46,10 @@ export class PlayerService {
         nickname: createPlayerDto.nickname,
       });
 
+      await this.cacheManager.del(
+        this.nicknameReserveKey(createPlayerDto.nickname),
+      );
+
       return player;
     } catch (error: unknown) {
       if (
@@ -58,7 +68,7 @@ export class PlayerService {
     const filter: Record<string, unknown> = { deletedAt: null };
 
     if (query?.nickname) {
-      filter.nickname = { $regex: query.nickname, $options: 'i' };
+      filter.nickname = { $regex: escapeRegExp(query.nickname), $options: 'i' };
     }
 
     const [total, players] = await Promise.all([
@@ -102,11 +112,19 @@ export class PlayerService {
     updatePlayerDto: UpdatePlayerDto,
   ): Promise<PlayerDocument | null> {
     try {
-      return await this.playerModel.findOneAndUpdate(
+      const player = await this.playerModel.findOneAndUpdate(
         { _id: id, userId, deletedAt: null },
         { $set: updatePlayerDto },
         { new: true, runValidators: true },
       );
+
+      if (player && updatePlayerDto.nickname) {
+        await this.cacheManager.del(
+          this.nicknameReserveKey(updatePlayerDto.nickname),
+        );
+      }
+
+      return player;
     } catch (error: unknown) {
       if (
         typeof error === 'object' &&
@@ -129,7 +147,7 @@ export class PlayerService {
     );
   }
 
-  public async suggestNickname(): Promise<string> {
+  public async suggestNickname(authUser: AuthUser): Promise<string> {
     const maxAttempts = 10;
     const numberDictionary = NumberDictionary.generate({
       min: 1000,
@@ -143,17 +161,55 @@ export class PlayerService {
         style: 'capital',
       });
 
+      const isReserved = await this.cacheManager.get(
+        this.nicknameReserveKey(candidate),
+      );
+      if (isReserved) continue;
+
       const exists = await this.playerModel.findOne({
         nickname: candidate,
         deletedAt: null,
       });
 
       if (!exists) {
+        await this.cacheManager.set(
+          this.nicknameReserveKey(candidate),
+          authUser.sub,
+          PlayerService.NICKNAME_RESERVATION_TTL_MS,
+        );
         return candidate;
       }
     }
 
     // Fallback with timestamp to guarantee uniqueness
-    return `Guest${Date.now()}`;
+    const fallback = `Guest${Date.now()}`;
+    await this.cacheManager.set(
+      this.nicknameReserveKey(fallback),
+      authUser.sub,
+      PlayerService.NICKNAME_RESERVATION_TTL_MS,
+    );
+    return fallback;
+  }
+
+  /**
+   * Dismisses a nickname reservation from the cache.
+   * If the reservation belongs to a different user, the request is silently
+   * ignored (privacy by design — callers cannot discover whether a nickname
+   * is reserved or by whom).
+   */
+  public async dismissNicknameReservation(
+    nickname: string,
+    userId: string,
+  ): Promise<void> {
+    const owner = await this.cacheManager.get<string>(
+      this.nicknameReserveKey(nickname),
+    );
+    // Only the user who reserved the nickname can dismiss it
+    if (owner !== null && owner !== userId) return;
+    await this.cacheManager.del(this.nicknameReserveKey(nickname));
+  }
+
+  private nicknameReserveKey(nickname: string): string {
+    return `nickname-reserve:${nickname}`;
   }
 }

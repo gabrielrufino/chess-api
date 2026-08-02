@@ -23,6 +23,7 @@ describe(PlayerController.name, () => {
             removeIfOwner: jest.fn(),
             updateIfOwner: jest.fn(),
             suggestNickname: jest.fn(),
+            dismissNicknameReservation: jest.fn(),
           },
         },
         {
@@ -111,13 +112,28 @@ describe(PlayerController.name, () => {
 
   describe('suggestNickname', () => {
     it('should return a nickname suggestion', async () => {
+      const request = { user: { sub: 'user-id', isGuest: true } };
       jest.spyOn(service, 'suggestNickname').mockResolvedValue('BoldRook5678');
 
-      const result = await controller.suggestNickname();
+      const result = await controller.suggestNickname(request as any);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(service.suggestNickname).toHaveBeenCalled();
+      expect(service.suggestNickname).toHaveBeenCalledWith(request.user);
       expect(result).toEqual({ nickname: 'BoldRook5678' });
+    });
+  });
+
+  describe('dismissNicknameReservation', () => {
+    it('should dismiss a nickname suggestion', async () => {
+      const request = { user: { sub: 'user-id' } };
+      const nickname = 'BoldRook5678';
+      await controller.dismissNicknameReservation(request as any, nickname);
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(service.dismissNicknameReservation).toHaveBeenCalledWith(
+        nickname,
+        request.user.sub,
+      );
     });
   });
 

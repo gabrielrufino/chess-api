@@ -23,4 +23,10 @@ describe('ParseMongoIdPipe', () => {
     expect(() => pipe.transform(invalidId)).toThrow(BadRequestException);
     expect(() => pipe.transform(invalidId)).toThrow('Invalid MongoDB ObjectId');
   });
+
+  it('should throw BadRequestException for a 24-character non-hex string', () => {
+    const invalidId = 'zzzzzzzzzzzzzzzzzzzzzzzz';
+    expect(() => pipe.transform(invalidId)).toThrow(BadRequestException);
+    expect(() => pipe.transform(invalidId)).toThrow('Invalid MongoDB ObjectId');
+  });
 });

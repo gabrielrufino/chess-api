@@ -4,10 +4,13 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Player } from '../schemas/player.schema';
 import { Model } from 'mongoose';
 import { NicknameAlreadyTakenException } from '../exceptions/nickname-already-taken.exception';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 describe(PlayerService.name, () => {
   let service: PlayerService;
   let repository: Model<Player>;
+  let cacheManager: Cache;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,12 +27,21 @@ describe(PlayerService.name, () => {
             findOneAndUpdate: jest.fn(),
           },
         },
+        {
+          provide: CACHE_MANAGER,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
+          },
+        },
         PlayerService,
       ],
     }).compile();
 
     service = module.get<PlayerService>(PlayerService);
     repository = module.get<Model<Player>>(getModelToken(Player.name));
+    cacheManager = module.get<Cache>(CACHE_MANAGER);
   });
 
   it('should be defined', () => {
@@ -62,6 +74,10 @@ describe(PlayerService.name, () => {
         isGuest: authUser.isGuest,
         nickname: createDto.nickname,
       });
+
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        `nickname-reserve:${createDto.nickname}`,
+      );
       expect(result).toEqual(mockPlayer);
     });
 
@@ -216,16 +232,43 @@ describe(PlayerService.name, () => {
   });
 
   describe('suggestNickname', () => {
-    it('should return a nickname that is not already taken', async () => {
+    const authUser = { sub: 'user-id', isGuest: true };
+
+    it('should return a nickname that is not already taken and reserve it', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
       jest.spyOn(repository, 'findOne').mockResolvedValue(null);
 
-      const result = await service.suggestNickname();
+      const result = await service.suggestNickname(authUser as any);
 
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);
+
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        `nickname-reserve:${result}`,
+        authUser.sub,
+        300000,
+      );
+    });
+
+    it('should skip candidates that are reserved in cache', async () => {
+      jest
+        .spyOn(cacheManager, 'get')
+        .mockResolvedValueOnce('other-user-id') // first candidate reserved by another user
+        .mockResolvedValue(null); // second candidate available
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+
+      const result = await service.suggestNickname(authUser as any);
+
+      // Verify the second call resolved the available nickname
+
+      expect(cacheManager.get).toHaveBeenCalledWith(
+        `nickname-reserve:${result}`,
+      );
+      expect(typeof result).toBe('string');
     });
 
     it('should retry and return a different nickname when first candidates are taken', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
       const findOneSpy = jest
         .spyOn(repository, 'findOne')
         // First 3 attempts return existing player, 4th returns null
@@ -234,10 +277,40 @@ describe(PlayerService.name, () => {
         .mockResolvedValueOnce({ nickname: 'taken3' } as any)
         .mockResolvedValueOnce(null);
 
-      const result = await service.suggestNickname();
+      const result = await service.suggestNickname(authUser as any);
 
       expect(findOneSpy).toHaveBeenCalledTimes(4);
       expect(typeof result).toBe('string');
+    });
+  });
+
+  describe('dismissNicknameReservation', () => {
+    it('should delete the reservation when caller is the owner', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue('user-id');
+
+      await service.dismissNicknameReservation('some-nickname', 'user-id');
+
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        'nickname-reserve:some-nickname',
+      );
+    });
+
+    it('should delete the reservation when no owner is stored (cache miss)', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
+
+      await service.dismissNicknameReservation('some-nickname', 'user-id');
+
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        'nickname-reserve:some-nickname',
+      );
+    });
+
+    it('should NOT delete the reservation when caller is not the owner', async () => {
+      jest.spyOn(cacheManager, 'get').mockResolvedValue('other-user-id');
+
+      await service.dismissNicknameReservation('some-nickname', 'user-id');
+
+      expect(cacheManager.del).not.toHaveBeenCalled();
     });
   });
 
@@ -261,6 +334,10 @@ describe(PlayerService.name, () => {
         { _id: '1', userId: 'user-id', deletedAt: null },
         { $set: { nickname: 'NewNick1234' } },
         { new: true, runValidators: true },
+      );
+
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        'nickname-reserve:NewNick1234',
       );
       expect(result).toEqual(updatedPlayer);
     });
