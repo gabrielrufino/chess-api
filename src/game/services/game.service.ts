@@ -189,13 +189,9 @@ export class GameService {
 
   private validatePlayerTurn(
     game: GameDocument,
-    player: PlayerDocument | null,
+    player: PlayerDocument,
     isWhiteTurn: boolean,
   ): void {
-    if (!player) {
-      throw new NotFoundException('Player not found');
-    }
-
     const currentPlayerId = isWhiteTurn
       ? game.whitePlayerId.toString()
       : game.blackPlayerId.toString();
