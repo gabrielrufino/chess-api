@@ -10,7 +10,10 @@ import { version, description } from '../package.json';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors({ origin: true, credentials: true });
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+    credentials: true,
+  });
   app.use(helmet());
 
   const documentation = SwaggerModule.createDocument(
