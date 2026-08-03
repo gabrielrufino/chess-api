@@ -14,7 +14,13 @@ import { plainToInstance } from 'class-transformer';
 import { Game, GameDocument } from '../schemas/game.schema';
 import { GameDto, GameBoardDto } from '../dto/game-response.dto';
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({
+  cors: {
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',')
+      : ['http://localhost:3000', 'http://localhost:8080'],
+  },
+})
 export class GameGateway {
   @WebSocketServer()
   server: Server;
