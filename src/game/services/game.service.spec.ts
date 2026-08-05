@@ -459,15 +459,17 @@ describe(GameService.name, () => {
         pgn: '',
         save: jest.fn(),
       };
-      jest.spyOn(service['gameModel'], 'findById').mockResolvedValue(gameMock as any);
+      jest.spyOn(service['gameModel'], 'findById').mockResolvedValue(gameMock);
       jest.spyOn(service['playerModel'], 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
 
       const error = new Error('Gateway Error');
-      jest.spyOn(service['gameGateway'], 'emitGameUpdated').mockImplementation(() => {
-        throw error;
-      });
+      jest
+        .spyOn(service['gameGateway'], 'emitGameUpdated')
+        .mockImplementation(() => {
+          throw error;
+        });
       const loggerSpy = jest.spyOn(service['logger'], 'error');
 
       await service.makeMove('game-1', { move: 'e4' }, { sub: 'user1' } as any);
@@ -489,15 +491,18 @@ describe(GameService.name, () => {
         pgn: '',
         save: jest.fn(),
       };
-      jest.spyOn(service['gameModel'], 'findById').mockResolvedValue(gameMock as any);
+      jest.spyOn(service['gameModel'], 'findById').mockResolvedValue(gameMock);
       jest.spyOn(service['playerModel'], 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
 
       const error = 'String Error';
-      jest.spyOn(service['gameGateway'], 'emitGameUpdated').mockImplementation(() => {
-        throw error;
-      });
+      jest
+        .spyOn(service['gameGateway'], 'emitGameUpdated')
+        .mockImplementation(() => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw error;
+        });
       const loggerSpy = jest.spyOn(service['logger'], 'error');
 
       await service.makeMove('game-1', { move: 'e4' }, { sub: 'user1' } as any);
