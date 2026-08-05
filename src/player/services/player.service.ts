@@ -138,15 +138,6 @@ export class PlayerService {
     }
   }
 
-  /** @deprecated Use {@link removeIfOwner} for ownership-checked deletion. */
-  public async remove(id: string) {
-    return this.playerModel.findByIdAndUpdate(
-      id,
-      { deletedAt: new Date() },
-      { new: true },
-    );
-  }
-
   public async suggestNickname(authUser: AuthUser): Promise<string> {
     const maxAttempts = 10;
     const numberDictionary = NumberDictionary.generate({
