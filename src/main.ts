@@ -24,7 +24,9 @@ async function bootstrap() {
   );
   SwaggerModule.setup('api', app, documentation);
 
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+  );
   app.useLogger(app.get(Logger));
 
   await app.listen(process.env.HTTP_SERVER_PORT || 3000);
