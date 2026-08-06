@@ -448,22 +448,25 @@ describe(GameService.name, () => {
   });
 
   describe('broadcastGameUpdate failure (via makeMove)', () => {
-    it('should log error when emitGameUpdated throws an Error', async () => {
+    beforeEach(() => {
       const gameMock = {
         _id: { toString: () => 'game-1' },
         toJSON: () => ({ id: 'game-1' }),
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
-        status: 'IN_PROGRESS',
+        status: GameStatusEnum.IN_PROGRESS,
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn: '',
         save: jest.fn(),
       };
-      jest.spyOn(service['gameModel'], 'findById').mockResolvedValue(gameMock);
-      jest.spyOn(service['playerModel'], 'findOne').mockResolvedValue({
+
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
+    });
 
+    it('should log error when emitGameUpdated throws an Error', async () => {
       const error = new Error('Gateway Error');
       jest
         .spyOn(service['gameGateway'], 'emitGameUpdated')
@@ -481,21 +484,6 @@ describe(GameService.name, () => {
     });
 
     it('should log stringified error when emitGameUpdated throws a non-Error', async () => {
-      const gameMock = {
-        _id: { toString: () => 'game-1' },
-        toJSON: () => ({ id: 'game-1' }),
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        status: 'IN_PROGRESS',
-        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        pgn: '',
-        save: jest.fn(),
-      };
-      jest.spyOn(service['gameModel'], 'findById').mockResolvedValue(gameMock);
-      jest.spyOn(service['playerModel'], 'findOne').mockResolvedValue({
-        _id: { toString: () => 'player1' },
-      } as any);
-
       const error = 'String Error';
       jest
         .spyOn(service['gameGateway'], 'emitGameUpdated')

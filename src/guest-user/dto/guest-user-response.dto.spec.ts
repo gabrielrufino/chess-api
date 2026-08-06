@@ -8,7 +8,9 @@ describe(GuestUserResponseDto.name, () => {
       token: 'some-jwt-token',
     };
 
-    const dto = plainToInstance(GuestUserResponseDto, plain);
+    const dto = plainToInstance(GuestUserResponseDto, plain, {
+      excludeExtraneousValues: true,
+    });
 
     expect(dto.id).toBe('guest-123');
     expect(dto.token).toBe('some-jwt-token');
@@ -21,7 +23,9 @@ describe(GuestUserResponseDto.name, () => {
       extraProperty: 'should-be-excluded',
     };
 
-    const dto = plainToInstance(GuestUserResponseDto, plain);
+    const dto = plainToInstance(GuestUserResponseDto, plain, {
+      excludeExtraneousValues: true,
+    });
 
     expect(dto.id).toBe('guest-123');
     expect(dto.token).toBe('some-jwt-token');

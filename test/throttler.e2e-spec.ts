@@ -11,6 +11,8 @@ describe('ThrottlerGuard (e2e)', () => {
     mongod = await MongoMemoryServer.create();
     process.env.DATABASE_URL = mongod.getUri();
     process.env.JWT_SECRET = 'test-secret';
+    process.env.THROTTLE_TTL = '60000';
+    process.env.THROTTLE_LIMIT = '5';
   });
 
   afterAll(async () => {
@@ -32,12 +34,19 @@ describe('ThrottlerGuard (e2e)', () => {
   });
 
   it('should return 429 after exceeding limit', async () => {
-    // 100 requests should pass
-    for (let i = 0; i < 100; i++) {
-      await request(app.getHttpServer()).get('/').expect(200);
+    // 5 requests should pass (matching THROTTLE_LIMIT env var)
+    for (let i = 0; i < 5; i++) {
+      await request(app.getHttpServer()).post('/guest-users').expect(201);
     }
 
-    // 101st request should be throttled
-    await request(app.getHttpServer()).get('/').expect(429);
-  }, 30000);
+    // 6th request should be throttled
+    await request(app.getHttpServer()).post('/guest-users').expect(429);
+  });
+
+  it('should not throttle health check endpoint', async () => {
+    // Health check uses @SkipThrottle(), so it should always return 200
+    for (let i = 0; i < 10; i++) {
+      await request(app.getHttpServer()).get('/').expect(200);
+    }
+  });
 });

@@ -20,8 +20,8 @@ import { GuestUserModule } from './guest-user/guest-user.module';
     CacheModule.register({ isGlobal: true }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 100,
+        ttl: parseInt(process.env.THROTTLE_TTL || '60000', 10),
+        limit: parseInt(process.env.THROTTLE_LIMIT || '100', 10),
       },
     ]),
     LoggerModule.forRoot({
