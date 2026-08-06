@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GuestUserController } from './guest-user.controller';
 import { GuestUserService } from '../services/guest-user.service';
-import { GuestUserDto } from '../dto/guest-user-response.dto';
+import { GuestUserResponseDto } from '../dto/guest-user-response.dto';
 
 describe(GuestUserController.name, () => {
   let controller: GuestUserController;
@@ -45,7 +45,7 @@ describe(GuestUserController.name, () => {
       const result = await controller.createGuestUser();
 
       expect(createGuestUserSpy).toHaveBeenCalled();
-      expect(result).toBeInstanceOf(GuestUserDto);
+      expect(result).toBeInstanceOf(GuestUserResponseDto);
       expect(result).toEqual({
         id: expectedId,
         token: expectedToken,
