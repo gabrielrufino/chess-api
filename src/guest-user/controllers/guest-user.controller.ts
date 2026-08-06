@@ -1,7 +1,7 @@
 import { Controller, Post } from '@nestjs/common';
 import { GuestUserService } from '../services/guest-user.service';
 import { ApiTags, ApiCreatedResponse } from '@nestjs/swagger';
-import { GuestUserDto } from '../dto/guest-user-response.dto';
+import { GuestUserResponseDto } from '../dto/guest-user-response.dto';
 import { plainToInstance } from 'class-transformer';
 
 @ApiTags('Guest users')
@@ -11,11 +11,11 @@ export class GuestUserController {
 
   @ApiCreatedResponse({
     description: 'Guest user successfully created.',
-    type: GuestUserDto,
+    type: GuestUserResponseDto,
   })
   @Post()
-  public async createGuestUser(): Promise<GuestUserDto> {
+  public async createGuestUser(): Promise<GuestUserResponseDto> {
     const guestUser = await this.guestUserService.createGuestUser();
-    return plainToInstance(GuestUserDto, guestUser);
+    return plainToInstance(GuestUserResponseDto, guestUser);
   }
 }
