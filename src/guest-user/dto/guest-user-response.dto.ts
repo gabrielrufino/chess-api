@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
 @Exclude()
-export class GuestUserDto {
+export class GuestUserResponseDto {
   @Expose()
   @ApiProperty({ description: 'The unique identifier of the guest user' })
   id: string;

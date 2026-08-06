@@ -1,14 +1,14 @@
 import { plainToInstance } from 'class-transformer';
-import { GuestUserDto } from './guest-user-response.dto';
+import { GuestUserResponseDto } from './guest-user-response.dto';
 
-describe('GuestUserDto', () => {
+describe(GuestUserResponseDto.name, () => {
   it('should expose id and token properties', () => {
     const plain = {
       id: 'guest-123',
       token: 'some-jwt-token',
     };
 
-    const dto = plainToInstance(GuestUserDto, plain);
+    const dto = plainToInstance(GuestUserResponseDto, plain);
 
     expect(dto.id).toBe('guest-123');
     expect(dto.token).toBe('some-jwt-token');
@@ -21,7 +21,7 @@ describe('GuestUserDto', () => {
       extraProperty: 'should-be-excluded',
     };
 
-    const dto = plainToInstance(GuestUserDto, plain);
+    const dto = plainToInstance(GuestUserResponseDto, plain);
 
     expect(dto.id).toBe('guest-123');
     expect(dto.token).toBe('some-jwt-token');
