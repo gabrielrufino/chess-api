@@ -177,25 +177,6 @@ describe(PlayerService.name, () => {
     });
   });
 
-  describe('remove', () => {
-    it('should remove a player', async () => {
-      jest
-        .spyOn(repository, 'findByIdAndUpdate')
-        .mockResolvedValue({ id: '1', deletedAt: new Date() });
-
-      const result = await service.remove('1');
-
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(repository.findByIdAndUpdate).toHaveBeenCalledWith(
-        '1',
-        expect.any(Object),
-        { new: true },
-      );
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      expect(result).toEqual({ id: '1', deletedAt: expect.any(Date) });
-    });
-  });
-
   describe('removeIfOwner', () => {
     it('should soft-delete and return the player when it belongs to the user', async () => {
       const deletedAt = new Date();

@@ -447,6 +447,61 @@ describe(GameService.name, () => {
     });
   });
 
+  describe('broadcastGameUpdate failure (via makeMove)', () => {
+    beforeEach(() => {
+      const gameMock = {
+        _id: { toString: () => 'game-1' },
+        toJSON: () => ({ id: 'game-1' }),
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        status: GameStatusEnum.IN_PROGRESS,
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        pgn: '',
+        save: jest.fn(),
+      };
+
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player1' },
+      } as any);
+    });
+
+    it('should log error when emitGameUpdated throws an Error', async () => {
+      const error = new Error('Gateway Error');
+      jest
+        .spyOn(service['gameGateway'], 'emitGameUpdated')
+        .mockImplementation(() => {
+          throw error;
+        });
+      const loggerSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.makeMove('game-1', { move: 'e4' }, { sub: 'user1' } as any);
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Failed to broadcast game update',
+        error.stack,
+      );
+    });
+
+    it('should log stringified error when emitGameUpdated throws a non-Error', async () => {
+      const error = 'String Error';
+      jest
+        .spyOn(service['gameGateway'], 'emitGameUpdated')
+        .mockImplementation(() => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw error;
+        });
+      const loggerSpy = jest.spyOn(service['logger'], 'error');
+
+      await service.makeMove('game-1', { move: 'e4' }, { sub: 'user1' } as any);
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Failed to broadcast game update',
+        String(error),
+      );
+    });
+  });
+
   describe(GameService.prototype.claimTimeout.name, () => {
     const mockAuthUser = { sub: 'user1' } as AuthUser;
 
