@@ -1,4 +1,4 @@
-import { HealthCheckService } from '@nestjs/terminus';
+import { HealthCheckService, MongooseHealthIndicator } from '@nestjs/terminus';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { AppController } from './app.controller';
@@ -14,6 +14,12 @@ describe('AppController', () => {
           provide: HealthCheckService,
           useValue: {
             check: jest.fn().mockResolvedValue({ status: 'ok', details: {} }),
+          },
+        },
+        {
+          provide: MongooseHealthIndicator,
+          useValue: {
+            pingCheck: jest.fn(),
           },
         },
       ],

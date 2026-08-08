@@ -4,6 +4,7 @@ import {
   HealthCheck,
   HealthCheckResult,
   HealthCheckService,
+  MongooseHealthIndicator,
 } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
 
@@ -11,11 +12,14 @@ import { SkipThrottle } from '@nestjs/throttler';
 @SkipThrottle()
 @Controller()
 export class AppController {
-  constructor(private readonly health: HealthCheckService) {}
+  constructor(
+    private readonly health: HealthCheckService,
+    private readonly mongoose: MongooseHealthIndicator,
+  ) {}
 
   @Get()
   @HealthCheck()
   public check(): Promise<HealthCheckResult> {
-    return this.health.check([]);
+    return this.health.check([() => this.mongoose.pingCheck('database')]);
   }
 }
