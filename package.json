@@ -21,6 +21,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:e2e:cov": "npm run test:e2e -- --coverage",
     "test:e2e:watch": "npm run test:e2e -- --watch",
+    "test:mutation": "stryker run",
     "demo:start": "http-server ./demo -p 8080 -o --cors"
   },
   "dependencies": {
@@ -57,6 +58,8 @@
     "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.1.28",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/jest-runner": "^10.0.0",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.13.3",
