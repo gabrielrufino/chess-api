@@ -417,12 +417,12 @@ describe(PlayerService.name, () => {
     });
 
     it('should re-throw error if it is null (not caught as duplicate key from updateIfOwner)', async () => {
-      jest
-        .spyOn(repository, 'findOneAndUpdate')
-        .mockRejectedValue(null);
+      jest.spyOn(repository, 'findOneAndUpdate').mockRejectedValue(null);
 
       try {
-        await service.updateIfOwner('1', 'user-id', { nickname: 'TakenNick1234' });
+        await service.updateIfOwner('1', 'user-id', {
+          nickname: 'TakenNick1234',
+        });
         fail('should have thrown');
       } catch (error) {
         expect(error).toBeNull();
@@ -435,7 +435,9 @@ describe(PlayerService.name, () => {
         .mockRejectedValue({ code: 99999 });
 
       try {
-        await service.updateIfOwner('1', 'user-id', { nickname: 'TakenNick1234' });
+        await service.updateIfOwner('1', 'user-id', {
+          nickname: 'TakenNick1234',
+        });
         fail('should have thrown');
       } catch (error) {
         expect(error).toEqual({ code: 99999 });
@@ -451,10 +453,16 @@ describe(PlayerService.name, () => {
     });
 
     it('should not call cacheManager.del when findOneAndUpdate returns a player but nickname is undefined/empty', async () => {
-      const updatedPlayer = { _id: '1', userId: 'user-id', nickname: 'OldNick' };
-      jest.spyOn(repository, 'findOneAndUpdate').mockResolvedValue(updatedPlayer);
+      const updatedPlayer = {
+        _id: '1',
+        userId: 'user-id',
+        nickname: 'OldNick',
+      };
+      jest
+        .spyOn(repository, 'findOneAndUpdate')
+        .mockResolvedValue(updatedPlayer);
 
-      await service.updateIfOwner('1', 'user-id', { });
+      await service.updateIfOwner('1', 'user-id', {});
 
       expect(cacheManager.del).not.toHaveBeenCalled();
     });

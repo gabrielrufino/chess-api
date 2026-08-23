@@ -79,13 +79,15 @@ describe(GameService.name, () => {
         [GameDurationEnum.TenPlusFive]: '10 min + 5 sec',
         [GameDurationEnum.FifteenPlusTen]: '15 min + 10 sec',
       };
-      result.forEach(item => {
+      result.forEach((item) => {
         expect(item.label).toBe(expectedLabels[item.value as string]);
       });
     });
 
     it('should fallback to value when label is not in the map', () => {
-      const spy = jest.spyOn(Object, 'values').mockReturnValue(['UnknownDuration' as any]);
+      const spy = jest
+        .spyOn(Object, 'values')
+        .mockReturnValue(['UnknownDuration' as any]);
       const result = service.getDurations();
       expect(result[0].label).toBe('UnknownDuration');
       spy.mockRestore();
@@ -152,10 +154,14 @@ describe(GameService.name, () => {
     it('should call findOneAndUpdate with exact arguments', async () => {
       const mockPlayer = { _id: { toString: () => 'player1' } };
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
-      const findOneAndUpdateSpy = jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(null);
+      const findOneAndUpdateSpy = jest
+        .spyOn(gameModel, 'findOneAndUpdate')
+        .mockResolvedValue(null);
       jest.spyOn(gameModel, 'create').mockResolvedValue({} as any);
 
-      await service.create({ duration: GameDurationEnum.FiveMinutes } as any, { sub: 'user1' } as any);
+      await service.create({ duration: GameDurationEnum.FiveMinutes }, {
+        sub: 'user1',
+      } as any);
 
       expect(findOneAndUpdateSpy).toHaveBeenCalledWith(
         {
@@ -183,10 +189,15 @@ describe(GameService.name, () => {
         toJSON: () => ({ _id: 'game1' }),
       };
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
-      jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(mockWaitingGame);
+      jest
+        .spyOn(gameModel, 'findOneAndUpdate')
+        .mockResolvedValue(mockWaitingGame);
       const emitSpy = jest.spyOn(service['gameGateway'], 'emitGameUpdated');
 
-      await service.create({ duration: 'unlimited' } as any, { sub: 'user1' } as any);
+      await service.create(
+        { duration: 'unlimited' } as any,
+        { sub: 'user1' } as any,
+      );
 
       expect(emitSpy).toHaveBeenCalled();
     });
@@ -195,28 +206,40 @@ describe(GameService.name, () => {
       const mockPlayer = { _id: { toString: () => 'player1' } };
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
       jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(null);
-      const createSpy = jest.spyOn(gameModel, 'create').mockResolvedValue({} as any);
+      const createSpy = jest
+        .spyOn(gameModel, 'create')
+        .mockResolvedValue({} as any);
 
-      await service.create({ duration: GameDurationEnum.ThreePlusTwo } as any, { sub: 'user1' } as any);
+      await service.create({ duration: GameDurationEnum.ThreePlusTwo }, {
+        sub: 'user1',
+      } as any);
 
-      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
-        whitePlayerId: mockPlayer._id,
-        incrementMs: 2000,
-      }));
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          whitePlayerId: mockPlayer._id,
+          incrementMs: 2000,
+        }),
+      );
     });
 
     it('should create game with incrementMs 0 for unlimited duration', async () => {
       const mockPlayer = { _id: { toString: () => 'player1' } };
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
       jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(null);
-      const createSpy = jest.spyOn(gameModel, 'create').mockResolvedValue({} as any);
+      const createSpy = jest
+        .spyOn(gameModel, 'create')
+        .mockResolvedValue({} as any);
 
-      await service.create({ duration: GameDurationEnum.Unlimited } as any, { sub: 'user1' } as any);
+      await service.create({ duration: GameDurationEnum.Unlimited }, {
+        sub: 'user1',
+      } as any);
 
-      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
-        whitePlayerId: mockPlayer._id,
-        incrementMs: 0,
-      }));
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          whitePlayerId: mockPlayer._id,
+          incrementMs: 0,
+        }),
+      );
     });
   });
 
