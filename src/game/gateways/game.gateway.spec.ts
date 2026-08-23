@@ -105,11 +105,14 @@ describe(GameGateway.name, () => {
 
       expect(result).toEqual({ joined: true });
       expect(mockClient.join).toHaveBeenCalledWith(validObjectId);
+      // Verify the emitted FEN reflects the post-e4 state (not the initial position),
+      // proving that loadPgn(game.pgn) was actually called.
+      const expectedFen = chess.fen();
       /* eslint-disable @typescript-eslint/no-unsafe-assignment */
       expect(mockClient.emit).toHaveBeenCalledWith(
         'game-updated',
         expect.objectContaining({
-          board: expect.objectContaining({ fen: expect.any(String) }),
+          board: expect.objectContaining({ fen: expectedFen }),
         }),
       );
       /* eslint-enable @typescript-eslint/no-unsafe-assignment */
@@ -137,9 +140,13 @@ describe(GameGateway.name, () => {
 
       expect(result).toEqual({ joined: true });
       expect(mockClient.join).toHaveBeenCalledWith(validObjectId);
+      // Verify the emitted FEN matches the game's FEN (proving chess.load(game.fen) was called)
+      const expectedFen = chess.fen();
       expect(mockClient.emit).toHaveBeenCalledWith(
         'game-updated',
-        expect.any(Object),
+        expect.objectContaining({
+          board: expect.objectContaining({ fen: expectedFen }),
+        }),
       );
     });
 
@@ -167,6 +174,9 @@ describe(GameGateway.name, () => {
 
       expect(result).toEqual({ joined: true });
       expect(warnSpy).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(validObjectId),
+      );
       expect(mockClient.join).toHaveBeenCalledWith(validObjectId);
       expect(mockClient.emit).toHaveBeenCalled();
     });

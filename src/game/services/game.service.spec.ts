@@ -3,6 +3,7 @@ import { GameService } from './game.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Player, PlayerDocument } from '../../player/schemas/player.schema';
 import { GameStatusEnum } from '../enumerables/game-status.enum';
+import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import {
   BadRequestException,
   ForbiddenException,
@@ -65,6 +66,30 @@ describe(GameService.name, () => {
       expect(result[0]).toHaveProperty('value');
       expect(result[0]).toHaveProperty('label');
     });
+
+    it('should return exact labels for each GameDurationEnum value', () => {
+      const result = service.getDurations();
+      const expectedLabels: Record<string, string> = {
+        [GameDurationEnum.Unlimited]: 'Unlimited',
+        [GameDurationEnum.OneMinute]: '1 minute',
+        [GameDurationEnum.ThreePlusTwo]: '3 min + 2 sec',
+        [GameDurationEnum.FiveMinutes]: '5 minutes',
+        [GameDurationEnum.FivePlusThree]: '5 min + 3 sec',
+        [GameDurationEnum.TenMinutes]: '10 minutes',
+        [GameDurationEnum.TenPlusFive]: '10 min + 5 sec',
+        [GameDurationEnum.FifteenPlusTen]: '15 min + 10 sec',
+      };
+      result.forEach(item => {
+        expect(item.label).toBe(expectedLabels[item.value as string]);
+      });
+    });
+
+    it('should fallback to value when label is not in the map', () => {
+      const spy = jest.spyOn(Object, 'values').mockReturnValue(['UnknownDuration' as any]);
+      const result = service.getDurations();
+      expect(result[0].label).toBe('UnknownDuration');
+      spy.mockRestore();
+    });
   });
 
   describe(GameService.prototype.create.name, () => {
@@ -122,6 +147,76 @@ describe(GameService.name, () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(gameModel.create).toHaveBeenCalled();
       expect(result).toEqual(mockNewGame);
+    });
+
+    it('should call findOneAndUpdate with exact arguments', async () => {
+      const mockPlayer = { _id: { toString: () => 'player1' } };
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
+      const findOneAndUpdateSpy = jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(null);
+      jest.spyOn(gameModel, 'create').mockResolvedValue({} as any);
+
+      await service.create({ duration: GameDurationEnum.FiveMinutes } as any, { sub: 'user1' } as any);
+
+      expect(findOneAndUpdateSpy).toHaveBeenCalledWith(
+        {
+          blackPlayerId: null,
+          whitePlayerId: { $ne: mockPlayer._id },
+          duration: GameDurationEnum.FiveMinutes,
+        },
+        {
+          $set: {
+            blackPlayerId: mockPlayer._id,
+            status: GameStatusEnum.IN_PROGRESS,
+            lastMoveAt: expect.any(Date),
+          },
+        },
+        { returnDocument: 'after' },
+      );
+    });
+
+    it('should emit broadcastGameUpdate when joining a waiting game', async () => {
+      const mockPlayer = { _id: { toString: () => 'player1' } };
+      const mockWaitingGame = {
+        _id: { toString: () => 'game1' },
+        pgn: '',
+        fen: new Chess().fen(),
+        toJSON: () => ({ _id: 'game1' }),
+      };
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
+      jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(mockWaitingGame);
+      const emitSpy = jest.spyOn(service['gameGateway'], 'emitGameUpdated');
+
+      await service.create({ duration: 'unlimited' } as any, { sub: 'user1' } as any);
+
+      expect(emitSpy).toHaveBeenCalled();
+    });
+
+    it('should create game with correct incrementMs for timed game', async () => {
+      const mockPlayer = { _id: { toString: () => 'player1' } };
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
+      jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(null);
+      const createSpy = jest.spyOn(gameModel, 'create').mockResolvedValue({} as any);
+
+      await service.create({ duration: GameDurationEnum.ThreePlusTwo } as any, { sub: 'user1' } as any);
+
+      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+        whitePlayerId: mockPlayer._id,
+        incrementMs: 2000,
+      }));
+    });
+
+    it('should create game with incrementMs 0 for unlimited duration', async () => {
+      const mockPlayer = { _id: { toString: () => 'player1' } };
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
+      jest.spyOn(gameModel, 'findOneAndUpdate').mockResolvedValue(null);
+      const createSpy = jest.spyOn(gameModel, 'create').mockResolvedValue({} as any);
+
+      await service.create({ duration: GameDurationEnum.Unlimited } as any, { sub: 'user1' } as any);
+
+      expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+        whitePlayerId: mockPlayer._id,
+        incrementMs: 0,
+      }));
     });
   });
 
@@ -444,6 +539,110 @@ describe(GameService.name, () => {
 
       expect(result.status).toBe(GameStatusEnum.CHECKMATE);
       expect(mockSave).toHaveBeenCalled();
+    });
+
+    it('should decrease remaining time and add incrementMs for white player', async () => {
+      const mockSave = jest.fn();
+      const lastMoveAt = new Date(Date.now() - 5000);
+      const gameMock = {
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        status: GameStatusEnum.IN_PROGRESS,
+        fen: new Chess().fen(),
+        lastMoveAt,
+        whiteTimeRemainingMs: 60000,
+        blackTimeRemainingMs: 60000,
+        incrementMs: 2000,
+        save: mockSave,
+      };
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player1' },
+      } as any);
+
+      const result = await service.makeMove('1', { move: 'e4' }, {
+        sub: 'user1',
+      } as unknown as AuthUser);
+
+      expect(result.whiteTimeRemainingMs).toBeGreaterThan(56000);
+      expect(result.whiteTimeRemainingMs).toBeLessThan(57100);
+    });
+
+    it('should decrease remaining time and add incrementMs for black player', async () => {
+      const mockSave = jest.fn();
+      const chess = new Chess();
+      chess.move('e4');
+      const lastMoveAt = new Date(Date.now() - 5000);
+      const gameMock = {
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        status: GameStatusEnum.IN_PROGRESS,
+        fen: chess.fen(),
+        pgn: chess.pgn(),
+        lastMoveAt,
+        whiteTimeRemainingMs: 60000,
+        blackTimeRemainingMs: 60000,
+        incrementMs: 2000,
+        save: mockSave,
+      };
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player2' },
+      } as any);
+
+      const result = await service.makeMove('1', { move: 'e5' }, {
+        sub: 'user2',
+      } as unknown as AuthUser);
+
+      expect(result.blackTimeRemainingMs).toBeGreaterThan(56000);
+      expect(result.blackTimeRemainingMs).toBeLessThan(57100);
+    });
+
+    it('should reject with exact Game is not full yet error message', async () => {
+      jest
+        .spyOn(gameModel, 'findById')
+        .mockResolvedValue({ whitePlayerId: 'player1' });
+      await expect(
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
+      ).rejects.toThrow('Game is not full yet');
+    });
+
+    it('should reject with exact Game is not in progress error message', async () => {
+      jest.spyOn(gameModel, 'findById').mockResolvedValue({
+        whitePlayerId: 'player1',
+        blackPlayerId: 'player2',
+        status: GameStatusEnum.WAITING_PLAYER,
+      });
+      await expect(
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
+      ).rejects.toThrow('Game is not in progress');
+    });
+
+    it('should reject with exact Game not found error message', async () => {
+      jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
+      await expect(
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
+      ).rejects.toThrow('Game not found');
+    });
+
+    it('should reject with exact Player not found error message', async () => {
+      jest.spyOn(gameModel, 'findById').mockResolvedValue({
+        whitePlayerId: 'player1',
+        blackPlayerId: 'player2',
+        status: GameStatusEnum.IN_PROGRESS,
+      });
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
+      await expect(
+        service.makeMove('1', { move: 'e4' }, {
+          sub: 'user1',
+        } as unknown as AuthUser),
+      ).rejects.toThrow('Player not found');
     });
   });
 
