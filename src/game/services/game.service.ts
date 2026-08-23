@@ -367,11 +367,15 @@ export class GameService {
       } else if (game.fen) {
         chess.load(game.fen);
       } else {
-        throw new Error('No game state found');
+        throw new BadRequestException('No game state found');
       }
-    } catch {
+    } catch (e) {
+      if (e instanceof BadRequestException) {
+        throw e;
+      }
       throw new BadRequestException('Invalid or corrupted game state');
     }
     return chess;
   }
 }
+
