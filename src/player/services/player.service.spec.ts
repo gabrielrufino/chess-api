@@ -134,7 +134,7 @@ describe(PlayerService.name, () => {
       try {
         await service.create(authUser as any, createDto);
         fail('should have thrown');
-      } catch (error) {
+      } catch (error: unknown) {
         expect(error).toBeNull();
       }
     });
@@ -149,7 +149,7 @@ describe(PlayerService.name, () => {
       try {
         await service.create(authUser as any, createDto);
         fail('should have thrown');
-      } catch (error) {
+      } catch (error: unknown) {
         expect(error).toBe(11000);
       }
     });
@@ -164,7 +164,7 @@ describe(PlayerService.name, () => {
       try {
         await service.create(authUser as any, createDto);
         fail('should have thrown');
-      } catch (error) {
+      } catch (error: unknown) {
         expect(error).toEqual({ code: 99999 });
       }
     });
@@ -424,7 +424,7 @@ describe(PlayerService.name, () => {
           nickname: 'TakenNick1234',
         });
         fail('should have thrown');
-      } catch (error) {
+      } catch (error: unknown) {
         expect(error).toBeNull();
       }
     });
@@ -439,7 +439,7 @@ describe(PlayerService.name, () => {
           nickname: 'TakenNick1234',
         });
         fail('should have thrown');
-      } catch (error) {
+      } catch (error: unknown) {
         expect(error).toEqual({ code: 99999 });
       }
     });
