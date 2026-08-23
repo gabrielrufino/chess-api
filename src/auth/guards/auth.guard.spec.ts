@@ -57,15 +57,16 @@ describe(AuthGuard.name, () => {
   it('should return true if route is public', async () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(true);
     const context = mockExecutionContext();
+    const handler = context.getHandler();
+    const cls = context.getClass();
 
     const result = await guard.canActivate(context);
 
     expect(result).toBe(true);
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(reflector.getAllAndOverride).toHaveBeenCalledWith(IS_PUBLIC_KEY, [
-      context.getHandler(),
-
-      context.getClass(),
+      handler,
+      cls,
     ]);
   });
 
@@ -87,6 +88,19 @@ describe(AuthGuard.name, () => {
   it('should throw UnauthorizedException if no token is provided', async () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
     const context = mockExecutionContext();
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('should throw UnauthorizedException if authorization header is "Bearer" with no token', async () => {
+    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
+    const context = mockExecutionContext();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const request = context.switchToHttp().getRequest();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    request.headers.authorization = 'Bearer';
 
     await expect(guard.canActivate(context)).rejects.toThrow(
       UnauthorizedException,

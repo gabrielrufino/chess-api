@@ -2,6 +2,7 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "../",
   "testEnvironment": "node",
+  "runInBand": true,
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
@@ -22,6 +23,7 @@
     "/node_modules/(?!(chess\\.js)/)"
   ],
   "modulePathIgnorePatterns": [
-    "<rootDir>/dist/"
+    "<rootDir>/dist/",
+    "<rootDir>/.stryker-tmp/"
   ]
 }

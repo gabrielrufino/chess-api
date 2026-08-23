@@ -51,5 +51,15 @@ describe(GuestUserController.name, () => {
         token: expectedToken,
       });
     });
+
+    it('should exclude extra properties not in GuestUserResponseDto', async () => {
+      service.createGuestUser.mockResolvedValue({
+        id: 'uuid-1234',
+        token: 'token.123',
+        extraField: 'should-be-excluded',
+      } as any);
+      const result = await controller.createGuestUser();
+      expect(result).not.toHaveProperty('extraField');
+    });
   });
 });

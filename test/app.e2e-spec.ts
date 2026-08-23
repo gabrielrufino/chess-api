@@ -33,11 +33,14 @@ describe('AppModule (e2e)', () => {
   });
 
   it('/ (GET)', () => {
-    return request(app.getHttpServer()).get('/').expect(200).expect({
-      status: 'ok',
-      info: { database: { status: 'up' } },
-      error: {},
-      details: { database: { status: 'up' } },
-    });
+    return request(app.getHttpServer())
+      .get('/')
+      .expect(200)
+      .expect({
+        status: 'ok',
+        info: { database: { status: 'up' } },
+        error: {},
+        details: { database: { status: 'up' } },
+      });
   });
 });

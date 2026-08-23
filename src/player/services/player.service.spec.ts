@@ -123,6 +123,51 @@ describe(PlayerService.name, () => {
         dbError,
       );
     });
+
+    it('should re-throw error if it is null (not caught as duplicate key)', async () => {
+      const authUser = { sub: 'user-id', isGuest: true };
+      const createDto = { nickname: 'RacedNickname' };
+
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+      jest.spyOn(repository, 'create').mockRejectedValue(null);
+
+      try {
+        await service.create(authUser as any, createDto);
+        fail('should have thrown');
+      } catch (error: unknown) {
+        expect(error).toBeNull();
+      }
+    });
+
+    it('should re-throw error if it is primitive number (not caught as duplicate key)', async () => {
+      const authUser = { sub: 'user-id', isGuest: true };
+      const createDto = { nickname: 'RacedNickname' };
+
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+      jest.spyOn(repository, 'create').mockRejectedValue(11000);
+
+      try {
+        await service.create(authUser as any, createDto);
+        fail('should have thrown');
+      } catch (error: unknown) {
+        expect(error).toBe(11000);
+      }
+    });
+
+    it('should re-throw error if code is not 11000', async () => {
+      const authUser = { sub: 'user-id', isGuest: true };
+      const createDto = { nickname: 'RacedNickname' };
+
+      jest.spyOn(repository, 'findOne').mockResolvedValue(null);
+      jest.spyOn(repository, 'create').mockRejectedValue({ code: 99999 });
+
+      try {
+        await service.create(authUser as any, createDto);
+        fail('should have thrown');
+      } catch (error: unknown) {
+        expect(error).toEqual({ code: 99999 });
+      }
+    });
   });
 
   describe('findAll', () => {
@@ -263,6 +308,24 @@ describe(PlayerService.name, () => {
       expect(findOneSpy).toHaveBeenCalledTimes(4);
       expect(typeof result).toBe('string');
     });
+
+    it('should verify that at most 10 attempts are made and fallback is returned', async () => {
+      const localAuthUser = { sub: 'user-id', isGuest: true };
+      jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
+      const findOneSpy = jest
+        .spyOn(repository, 'findOne')
+        .mockResolvedValue({ nickname: 'taken' } as any);
+
+      const result = await service.suggestNickname(localAuthUser as any);
+
+      expect(findOneSpy).toHaveBeenCalledTimes(10);
+      expect(result.startsWith('Guest')).toBe(true);
+      expect(cacheManager.set).toHaveBeenCalledWith(
+        `nickname-reserve:${result}`,
+        localAuthUser.sub,
+        300000,
+      );
+    });
   });
 
   describe('dismissNicknameReservation', () => {
@@ -351,6 +414,57 @@ describe(PlayerService.name, () => {
       await expect(
         service.updateIfOwner('1', 'user-id', { nickname: 'TakenNick1234' }),
       ).rejects.toThrow(NicknameAlreadyTakenException);
+    });
+
+    it('should re-throw error if it is null (not caught as duplicate key from updateIfOwner)', async () => {
+      jest.spyOn(repository, 'findOneAndUpdate').mockRejectedValue(null);
+
+      try {
+        await service.updateIfOwner('1', 'user-id', {
+          nickname: 'TakenNick1234',
+        });
+        fail('should have thrown');
+      } catch (error: unknown) {
+        expect(error).toBeNull();
+      }
+    });
+
+    it('should re-throw error if code is not 11000 from updateIfOwner', async () => {
+      jest
+        .spyOn(repository, 'findOneAndUpdate')
+        .mockRejectedValue({ code: 99999 });
+
+      try {
+        await service.updateIfOwner('1', 'user-id', {
+          nickname: 'TakenNick1234',
+        });
+        fail('should have thrown');
+      } catch (error: unknown) {
+        expect(error).toEqual({ code: 99999 });
+      }
+    });
+
+    it('should not call cacheManager.del when findOneAndUpdate returns null even when nickname is provided', async () => {
+      jest.spyOn(repository, 'findOneAndUpdate').mockResolvedValue(null);
+
+      await service.updateIfOwner('1', 'user-id', { nickname: 'NewNick1234' });
+
+      expect(cacheManager.del).not.toHaveBeenCalled();
+    });
+
+    it('should not call cacheManager.del when findOneAndUpdate returns a player but nickname is undefined/empty', async () => {
+      const updatedPlayer = {
+        _id: '1',
+        userId: 'user-id',
+        nickname: 'OldNick',
+      };
+      jest
+        .spyOn(repository, 'findOneAndUpdate')
+        .mockResolvedValue(updatedPlayer);
+
+      await service.updateIfOwner('1', 'user-id', {});
+
+      expect(cacheManager.del).not.toHaveBeenCalled();
     });
   });
 });
