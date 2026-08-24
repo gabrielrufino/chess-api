@@ -181,6 +181,41 @@ describe(GameGateway.name, () => {
       expect(mockClient.emit).toHaveBeenCalled();
     });
 
+    it('should join and emit even if game state throws a string error (logs warning)', async () => {
+      const mockGame = {
+        _id: 'game1',
+        pgn: 'valid-pgn-but-throws-string',
+        fen: 'invalid-fen',
+        toJSON: jest.fn().mockReturnValue({
+          _id: 'game1',
+          pgn: 'valid-pgn-but-throws-string',
+          fen: 'invalid-fen',
+        }),
+      };
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockGame),
+      } as any);
+      
+      const chessLoadPgnSpy = jest.spyOn(Chess.prototype, 'loadPgn').mockImplementation(() => {
+        throw 'String error thrown by mock';
+      });
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+      const validObjectId = '507f1f77bcf86cd799439011';
+      const result = await gateway.handleJoinGame(
+        validObjectId,
+        mockClient as unknown as Socket,
+      );
+
+      expect(result).toEqual({ joined: true });
+      expect(warnSpy).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('String error thrown by mock'),
+      );
+      
+      chessLoadPgnSpy.mockRestore();
+    });
+
     it('should join and emit with default board when game has no pgn and no fen', async () => {
       const mockGame = {
         _id: 'game1',

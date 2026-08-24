@@ -272,6 +272,23 @@ describe(GameService.name, () => {
       expect(spyFind).toHaveBeenCalled();
       expect(result).toEqual({ data: mockGames, total: 2 });
     });
+
+    it('should use default skip and limit when not provided', async () => {
+      const mockGames = [{ _id: '1' }, { _id: '2' }];
+      const findObj = {
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockGames),
+      };
+      jest.spyOn(gameModel, 'find').mockReturnValue(findObj as any);
+      jest.spyOn(gameModel, 'estimatedDocumentCount').mockResolvedValue(2);
+
+      const result = await service.findAll();
+      expect(findObj.skip).toHaveBeenCalledWith(0);
+      expect(findObj.limit).toHaveBeenCalledWith(10);
+      expect(result).toEqual({ data: mockGames, total: 2 });
+    });
   });
 
   describe(GameService.prototype.findOne.name, () => {
@@ -1328,6 +1345,8 @@ describe(GameService.name, () => {
     it('should throw "Time is up for White" with exact message', async () => {
       const mockSave = jest.fn();
       jest.spyOn(gameModel, 'findById').mockResolvedValue({
+        _id: { toString: () => 'game1' },
+        toJSON: () => ({ _id: 'game1' }),
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
@@ -1351,6 +1370,8 @@ describe(GameService.name, () => {
       const chess = new Chess();
       chess.move('e4');
       jest.spyOn(gameModel, 'findById').mockResolvedValue({
+        _id: { toString: () => 'game1' },
+        toJSON: () => ({ _id: 'game1' }),
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
@@ -1376,6 +1397,8 @@ describe(GameService.name, () => {
       const preStalemateFen = '8/8/8/8/8/2K5/8/kQ6 w - - 0 1';
       const mockSave = jest.fn();
       const gameMock = {
+        _id: { toString: () => 'game1' },
+        toJSON: () => ({ _id: 'game1' }),
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
@@ -1395,6 +1418,8 @@ describe(GameService.name, () => {
     it('should NOT change status when move does not end the game', async () => {
       const mockSave = jest.fn();
       const gameMock = {
+        _id: { toString: () => 'game1' },
+        toJSON: () => ({ _id: 'game1' }),
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,

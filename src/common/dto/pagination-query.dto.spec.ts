@@ -23,4 +23,11 @@ describe(PaginationQueryDto.name, () => {
     expect(dto.skip).toBe(5);
     expect(dto.limit).toBe(25);
   });
+
+  it('should transform strings to numbers', () => {
+    const { plainToInstance } = require('class-transformer');
+    const dto = plainToInstance(PaginationQueryDto, { skip: '5', limit: '25' });
+    expect(dto.skip).toBe(5);
+    expect(dto.limit).toBe(25);
+  });
 });
