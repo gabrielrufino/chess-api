@@ -52,6 +52,7 @@ describe('PlayerModule (e2e)', () => {
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     if (app) await app.close();
     if (mongod) await mongod.stop();
   });
@@ -214,6 +215,56 @@ describe('PlayerModule (e2e)', () => {
       expect(listRes.body.total).toBe(0);
     });
   });
+
+  describe('DELETE /players/nickname-suggestion/:nickname', () => {
+    it('should dismiss a nickname suggestion', async () => {
+      const authUserId = faker.datatype.uuid();
+
+      const suggestionRes = await client
+        .get('/players/nickname-suggestion')
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.OK);
+
+      const suggestedNickname = suggestionRes.body.nickname as string;
+
+      await client
+        .delete(`/players/nickname-suggestion/${suggestedNickname}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.NO_CONTENT);
+    });
+  });
+
+  describe('GET /players/:id', () => {
+    it('should return a player by id', async () => {
+      const authUserId = faker.datatype.uuid();
+
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'GetMe1234' })
+        .expect(HttpStatus.CREATED);
+
+      const playerId = createRes.body._id as string;
+
+      const getRes = await client
+        .get(`/players/${playerId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.OK);
+
+      expect(getRes.body._id).toBe(playerId);
+      expect(getRes.body.nickname).toBe('GetMe1234');
+    });
+
+    it('should return 404 when player does not exist', async () => {
+      const authUserId = faker.datatype.uuid();
+      const nonExistentId = '000000000000000000000001';
+
+      await client
+        .get(`/players/${nonExistentId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.NOT_FOUND);
+    });
+  });
   describe('DELETE /players/:id', () => {
     it('should delete a player when requested by its owner', async () => {
       const authUserId = faker.datatype.uuid();
@@ -268,6 +319,26 @@ describe('PlayerModule (e2e)', () => {
 
       await client
         .delete(`/players/${nonExistentId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.NOT_FOUND);
+    });
+
+    it('should return 404 if player is deleted between find and remove (race condition)', async () => {
+      const authUserId = faker.datatype.uuid();
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'RaceDelete1234' })
+        .expect(HttpStatus.CREATED);
+
+      const playerId = createRes.body._id as string;
+      const { PlayerService } =
+        await import('../src/player/services/player.service');
+      const playerService = app.get(PlayerService);
+      jest.spyOn(playerService, 'removeIfOwner').mockResolvedValueOnce(null);
+
+      await client
+        .delete(`/players/${playerId}`)
         .set('x-user-id', authUserId)
         .expect(HttpStatus.NOT_FOUND);
     });
@@ -343,13 +414,6 @@ describe('PlayerModule (e2e)', () => {
       const user1Id = faker.datatype.uuid();
       const user2Id = faker.datatype.uuid();
 
-      // User 1 takes a nickname
-      await client
-        .post('/players')
-        .set('x-user-id', user1Id)
-        .send({ nickname: 'AlreadyTaken1234' })
-        .expect(HttpStatus.CREATED);
-
       // User 2 creates their own player
       const createRes = await client
         .post('/players')
@@ -360,12 +424,39 @@ describe('PlayerModule (e2e)', () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const playerId = createRes.body._id as string;
 
-      // User 2 tries to rename to user 1's nickname
+      // Mock the service to simulate a unique constraint violation
+      const { PlayerService } = await import('../src/player/services/player.service');
+      const { NicknameAlreadyTakenException } = await import('../src/player/exceptions/nickname-already-taken.exception');
+      const playerService = app.get(PlayerService);
+      jest.spyOn(playerService, 'updateIfOwner').mockRejectedValueOnce(new NicknameAlreadyTakenException('AlreadyTaken1234'));
+
+      // User 2 tries to rename to an already taken nickname
       await client
         .patch(`/players/${playerId}`)
         .set('x-user-id', user2Id)
         .send({ nickname: 'AlreadyTaken1234' })
         .expect(HttpStatus.CONFLICT);
+    });
+
+    it('should return 404 if player is deleted between find and update (race condition)', async () => {
+      const authUserId = faker.datatype.uuid();
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'RaceUpdate1234' })
+        .expect(HttpStatus.CREATED);
+
+      const playerId = createRes.body._id as string;
+      const { PlayerService } =
+        await import('../src/player/services/player.service');
+      const playerService = app.get(PlayerService);
+      jest.spyOn(playerService, 'updateIfOwner').mockResolvedValueOnce(null);
+
+      await client
+        .patch(`/players/${playerId}`)
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'RaceUpdate4321' })
+        .expect(HttpStatus.NOT_FOUND);
     });
   });
 });

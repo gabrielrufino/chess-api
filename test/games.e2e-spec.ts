@@ -143,6 +143,21 @@ describe('GameModule (e2e)', () => {
     });
   });
 
+  describe('GET /games/durations', () => {
+    it('Should return available game durations', async () => {
+      const { authUserId } = await createPlayer(app);
+
+      const response = await client
+        .get('/games/durations')
+        .set('x-user-id', authUserId);
+
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(Array.isArray(response.body)).toBe(true);
+      expect(response.body.length).toBeGreaterThan(0);
+      expect(response.body[0]).toBeDefined();
+    });
+  });
+
   describe('GET /games', () => {
     it('Should list all the games', () => {
       return request(app.getHttpServer())
@@ -154,6 +169,27 @@ describe('GameModule (e2e)', () => {
   });
 
   describe('GET /games/:id', () => {
+    it('Should return a game', async () => {
+      const { authUserId, player } = await createPlayer(app);
+
+      const createdGameResponse = await client
+        .post('/games')
+        .set('x-user-id', authUserId)
+        .send({
+          duration: GameDurationEnum.OneMinute,
+        });
+
+      const gameId = createdGameResponse.body._id as string;
+
+      const response = await client
+        .get(`/games/${gameId}`)
+        .set('x-user-id', authUserId);
+
+      expect(response.status).toBe(HttpStatus.OK);
+      expect(response.body._id).toBe(gameId);
+      expect(response.body.whitePlayerId).toBeDefined();
+    });
+
     it('Should throw 400 Bad Request if invalid MongoDB ObjectId is provided', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId } = await createPlayer(app);
@@ -165,6 +201,16 @@ describe('GameModule (e2e)', () => {
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res.body.message).toBe('Invalid MongoDB ObjectId');
+    });
+
+    it('Should return 404 if game does not exist', async () => {
+      const { authUserId } = await createPlayer(app);
+      const nonExistentId = '000000000000000000000001';
+
+      await client
+        .get(`/games/${nonExistentId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.NOT_FOUND);
     });
   });
 
@@ -394,6 +440,88 @@ describe('GameModule (e2e)', () => {
           });
         })
         .catch(done);
+    });
+  });
+
+  describe('Timeouts', () => {
+    it('Should return 400 and set game to timeout if player time is up when making a move', async () => {
+      const { authUserId: player1Id } = await createPlayer(app);
+      const { authUserId: player2Id } = await createPlayer(app);
+
+      // Create game
+      const createdRes = await client
+        .post('/games')
+        .set('x-user-id', player1Id)
+        .send({ duration: GameDurationEnum.OneMinute })
+        .expect(HttpStatus.CREATED);
+
+      const gameId = createdRes.body._id as string;
+
+      // Join game (matchmaking)
+      await client
+        .post('/games')
+        .set('x-user-id', player2Id)
+        .send({ duration: GameDurationEnum.OneMinute })
+        .expect(HttpStatus.CREATED);
+
+      // White makes move
+      await client
+        .post(`/games/${gameId}/moves`)
+        .set('x-user-id', player1Id)
+        .send({ move: 'e4' })
+        .expect(HttpStatus.CREATED);
+
+      // Manually edit the game in DB to simulate timeout for Black
+      const { GameService } = await import('../src/game/services/game.service');
+      const gameService = app.get(GameService);
+      const gameModel = (gameService as any).gameModel;
+      const game = await gameModel.findById(gameId);
+      // Set lastMoveAt to 2 minutes ago
+      game.lastMoveAt = new Date(Date.now() - 120000);
+      await game.save();
+
+      // Black tries to move, should get timeout
+      const moveRes = await client
+        .post(`/games/${gameId}/moves`)
+        .set('x-user-id', player2Id)
+        .send({ move: 'e5' })
+        .expect(HttpStatus.BAD_REQUEST);
+
+      expect(moveRes.body.message).toContain('Time is up');
+    });
+
+    it('Should allow claiming a timeout', async () => {
+      const { authUserId: player1Id } = await createPlayer(app);
+      const { authUserId: player2Id } = await createPlayer(app);
+
+      const createdRes = await client
+        .post('/games')
+        .set('x-user-id', player1Id)
+        .send({ duration: GameDurationEnum.OneMinute })
+        .expect(HttpStatus.CREATED);
+
+      const gameId = createdRes.body._id as string;
+
+      await client
+        .post('/games')
+        .set('x-user-id', player2Id)
+        .send({ duration: GameDurationEnum.OneMinute })
+        .expect(HttpStatus.CREATED);
+
+      // Manually edit the game in DB to simulate timeout for White
+      const { GameService } = await import('../src/game/services/game.service');
+      const gameService = app.get(GameService);
+      const gameModel = (gameService as any).gameModel;
+      const game = await gameModel.findById(gameId);
+      // Set lastMoveAt to 2 minutes ago
+      game.lastMoveAt = new Date(Date.now() - 120000);
+      await game.save();
+
+      // claim timeout
+      await client
+        .post(`/games/${gameId}/claim-timeout`)
+        .set('x-user-id', player2Id)
+        .expect(HttpStatus.CREATED);
     });
   });
 });

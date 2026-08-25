@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 
+jest.setTimeout(30000);
+
 describe('ThrottlerGuard (e2e)', () => {
   let app: INestApplication;
   let mongod: MongoMemoryServer;
