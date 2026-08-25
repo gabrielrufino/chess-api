@@ -195,10 +195,12 @@ describe(GameGateway.name, () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockGame),
       } as any);
-      
-      const chessLoadPgnSpy = jest.spyOn(Chess.prototype, 'loadPgn').mockImplementation(() => {
-        throw 'String error thrown by mock';
-      });
+
+      const chessLoadPgnSpy = jest
+        .spyOn(Chess.prototype, 'loadPgn')
+        .mockImplementation(() => {
+          throw 'String error thrown by mock';
+        });
       const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
       const validObjectId = '507f1f77bcf86cd799439011';
@@ -212,7 +214,7 @@ describe(GameGateway.name, () => {
       expect(warnSpy).toHaveBeenCalledWith(
         expect.stringContaining('String error thrown by mock'),
       );
-      
+
       chessLoadPgnSpy.mockRestore();
     });
 

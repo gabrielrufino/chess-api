@@ -421,9 +421,9 @@ describe(PlayerService.name, () => {
         .spyOn(repository, 'findOneAndUpdate')
         .mockRejectedValue({ code: 11000 });
 
-      await expect(
-        service.updateIfOwner('1', 'user-id', {}),
-      ).rejects.toThrow(NicknameAlreadyTakenException);
+      await expect(service.updateIfOwner('1', 'user-id', {})).rejects.toThrow(
+        NicknameAlreadyTakenException,
+      );
     });
 
     it('should re-throw error if it is null (not caught as duplicate key from updateIfOwner)', async () => {

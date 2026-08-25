@@ -986,7 +986,9 @@ describe(GameService.name, () => {
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
-      const result = await service.claimTimeout('1', { sub: 'user1' } as AuthUser);
+      const result = await service.claimTimeout('1', {
+        sub: 'user1',
+      } as AuthUser);
       expect(result.status).toBe(GameStatusEnum.TIMEOUT);
       jest.useRealTimers();
     });
@@ -1203,7 +1205,9 @@ describe(GameService.name, () => {
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
-      const result = await service.makeMove('1', { move: 'e4' }, { sub: 'user1' } as unknown as AuthUser);
+      const result = await service.makeMove('1', { move: 'e4' }, {
+        sub: 'user1',
+      } as unknown as AuthUser);
       expect(mockSave).toHaveBeenCalled();
       expect(result.whiteTimeRemainingMs).toBeUndefined();
     });
@@ -1226,7 +1230,9 @@ describe(GameService.name, () => {
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
-      const result = await service.makeMove('1', { move: 'e5' }, { sub: 'user2' } as unknown as AuthUser);
+      const result = await service.makeMove('1', { move: 'e5' }, {
+        sub: 'user2',
+      } as unknown as AuthUser);
       expect(mockSave).toHaveBeenCalled();
       expect(result.blackTimeRemainingMs).toBeUndefined();
     });
@@ -1476,7 +1482,9 @@ describe(GameService.name, () => {
         status: GameStatusEnum.IN_PROGRESS,
         fen: new Chess().fen(),
       });
-      const findOneSpy = jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
+      const findOneSpy = jest
+        .spyOn(playerModel, 'findOne')
+        .mockResolvedValue(null);
       await expect(
         service.makeMove('1', { move: 'e4' }, { sub: 'user-abc' } as any),
       ).rejects.toThrow(NotFoundException);
@@ -1490,9 +1498,14 @@ describe(GameService.name, () => {
   describe('create — additional mutant killers', () => {
     // --- Mutant killers: IDs 98, 104 ---
     it('should query playerModel with { userId: authUser.sub } in create', async () => {
-      const findOneSpy = jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
+      const findOneSpy = jest
+        .spyOn(playerModel, 'findOne')
+        .mockResolvedValue(null);
       await expect(
-        service.create({ duration: 'unlimited' } as any, { sub: 'specific-user' } as any),
+        service.create(
+          { duration: 'unlimited' } as any,
+          { sub: 'specific-user' } as any,
+        ),
       ).rejects.toThrow(NotFoundException);
       expect(findOneSpy).toHaveBeenCalledWith({ userId: 'specific-user' });
     });
@@ -1500,7 +1513,10 @@ describe(GameService.name, () => {
     it('should throw "Player not found" with exact message in create', async () => {
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
       await expect(
-        service.create({ duration: 'unlimited' } as any, { sub: 'user1' } as any),
+        service.create(
+          { duration: 'unlimited' } as any,
+          { sub: 'user1' } as any,
+        ),
       ).rejects.toThrow('Player not found');
     });
   });
@@ -1516,7 +1532,9 @@ describe(GameService.name, () => {
         whitePlayerId: 'player1',
         blackPlayerId: 'player2',
       });
-      const findOneSpy = jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
+      const findOneSpy = jest
+        .spyOn(playerModel, 'findOne')
+        .mockResolvedValue(null);
       await expect(
         service.claimTimeout('1', { sub: 'specific-user' } as any),
       ).rejects.toThrow(NotFoundException);
@@ -1533,7 +1551,9 @@ describe(GameService.name, () => {
       const secondPopulate = jest.fn().mockReturnValue({
         lean: jest.fn().mockResolvedValue([]),
       });
-      const firstPopulate = jest.fn().mockReturnValue({ populate: secondPopulate });
+      const firstPopulate = jest
+        .fn()
+        .mockReturnValue({ populate: secondPopulate });
       jest.spyOn(gameModel, 'estimatedDocumentCount').mockResolvedValue(0);
       jest.spyOn(gameModel, 'find').mockReturnValue({
         skip: jest.fn().mockReturnValue({
@@ -1552,7 +1572,9 @@ describe(GameService.name, () => {
       const secondPopulate = jest.fn().mockReturnValue({
         lean: jest.fn().mockResolvedValue(null),
       });
-      const firstPopulate = jest.fn().mockReturnValue({ populate: secondPopulate });
+      const firstPopulate = jest
+        .fn()
+        .mockReturnValue({ populate: secondPopulate });
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         populate: firstPopulate,
       } as any);
@@ -1617,7 +1639,9 @@ describe(GameService.name, () => {
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         lean: jest.fn().mockResolvedValue({ pgn: '', fen: '' }),
       } as any);
-      await expect(service.getBoard('1')).rejects.toThrow('No game state found');
+      await expect(service.getBoard('1')).rejects.toThrow(
+        'No game state found',
+      );
     });
 
     // --- Mutant killer: ID 342 ---
