@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { PaginationQueryDto } from './pagination-query.dto';
 
 describe(PaginationQueryDto.name, () => {

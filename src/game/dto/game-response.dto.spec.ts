@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { GameDto, GameListDto } from './game-response.dto';
 import { PlayerDto } from '../../player/dto/player-response.dto';
 import 'reflect-metadata';

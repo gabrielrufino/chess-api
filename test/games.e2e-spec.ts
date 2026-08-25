@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
@@ -38,11 +39,10 @@ describe('GameModule (e2e)', () => {
       .overrideGuard(AuthGuard)
       .useValue({
         canActivate: (context: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           const req = context.switchToHttp().getRequest();
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
           const userId = req.headers['x-user-id'] || faker.datatype.uuid();
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+
           req.user = { sub: userId, isGuest: true };
           return true;
         },
@@ -54,7 +54,6 @@ describe('GameModule (e2e)', () => {
 
     await app.init();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     client = request(app.getHttpServer());
   });
 
@@ -67,7 +66,6 @@ describe('GameModule (e2e)', () => {
 
   describe('POST /games', () => {
     it('Should create a new game when receive correct data', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId } = await createPlayer(app);
 
       const response = await client
@@ -78,14 +76,13 @@ describe('GameModule (e2e)', () => {
         });
 
       expect(response.status).toBe(HttpStatus.CREATED);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(response.body.whitePlayerId).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(response.body.blackPlayerId).toBeUndefined();
     });
 
     it('Should return a validation error when does not receive duration', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId } = await createPlayer(app);
 
       return request(app.getHttpServer())
@@ -96,7 +93,6 @@ describe('GameModule (e2e)', () => {
     });
 
     it('Should return an error when the player does not exist', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       return request(app.getHttpServer())
         .post('/games')
         .set('x-user-id', faker.datatype.uuid()) // invalid user
@@ -112,9 +108,8 @@ describe('GameModule (e2e)', () => {
     });
 
     it('Should join an existing waiting game', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId: player1Id } = await createPlayer(app);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const { authUserId: player2Id } = await createPlayer(app);
 
       // Player 1 creates game
@@ -134,11 +129,11 @@ describe('GameModule (e2e)', () => {
       expect(res2.status).toBe(HttpStatus.CREATED);
 
       // Should be the same game ID
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(res2.body._id).toBe(res1.body._id);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(res2.body.whitePlayerId).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(res2.body.blackPlayerId).toBeDefined();
     });
   });
@@ -191,7 +186,6 @@ describe('GameModule (e2e)', () => {
     });
 
     it('Should throw 400 Bad Request if invalid MongoDB ObjectId is provided', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId } = await createPlayer(app);
 
       const res = await request(app.getHttpServer())
@@ -199,7 +193,6 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(400);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res.body.message).toBe('Invalid MongoDB ObjectId');
     });
 
@@ -216,9 +209,8 @@ describe('GameModule (e2e)', () => {
 
   describe('Play Game', () => {
     it('Should play a full game of chess until checkmate', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId: player1Id } = await createPlayer(app);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const { authUserId: player2Id } = await createPlayer(app);
 
       // Player 1 creates game
@@ -227,7 +219,6 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', player1Id)
         .send({ duration: GameDurationEnum.FiveMinutes });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const gameId = res1.body._id;
 
       // Player 2 joins game
@@ -241,26 +232,25 @@ describe('GameModule (e2e)', () => {
         .get(`/games/${gameId}/board`)
         .set('x-user-id', player1Id)
         .expect(200);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(boardRes.body.fen).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(boardRes.body.board).toBeDefined();
 
       // Scholar's Mate Sequence
       const moves = [
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         { player: player1Id, move: 'e4' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         { player: player2Id, move: 'e5' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         { player: player1Id, move: 'Bc4' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         { player: player2Id, move: 'Nc6' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         { player: player1Id, move: 'Qh5' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         { player: player2Id, move: 'Nf6' },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
         { player: player1Id, move: 'Qxf7#' },
       ];
 
@@ -287,7 +277,6 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', player1Id)
         .expect(200);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(gameAfter.body.status).toBe('CHECKMATE');
 
       // Attempting to play after checkmate should fail
@@ -301,9 +290,8 @@ describe('GameModule (e2e)', () => {
 
   describe('Time Control', () => {
     it('Should allow a player to claim timeout when opponent time expires', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId: player1Id } = await createPlayer(app);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const { authUserId: player2Id } = await createPlayer(app);
 
       // Player 1 creates game (1min)
@@ -312,7 +300,6 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', player1Id)
         .send({ duration: GameDurationEnum.OneMinute });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const gameId = res1.body._id;
 
       // Player 2 joins game
@@ -322,9 +309,9 @@ describe('GameModule (e2e)', () => {
         .send({ duration: GameDurationEnum.OneMinute });
 
       // Hack the database to make it look like 2 minutes have passed
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const gameModel = app.get(getModelToken('Game'));
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+
       await gameModel.findByIdAndUpdate(gameId, {
         lastMoveAt: new Date(Date.now() - 120000),
       });
@@ -335,14 +322,12 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', player2Id)
         .expect(201);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(claimRes.body.status).toBe('TIMEOUT');
     });
 
     it('Should throw bad request if a move is made after time expires', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { authUserId: player1Id } = await createPlayer(app);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const { authUserId: player2Id } = await createPlayer(app);
 
       const res1 = await request(app.getHttpServer())
@@ -350,7 +335,6 @@ describe('GameModule (e2e)', () => {
         .set('x-user-id', player1Id)
         .send({ duration: GameDurationEnum.OneMinute });
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const gameId = res1.body._id;
 
       await request(app.getHttpServer())
@@ -359,9 +343,9 @@ describe('GameModule (e2e)', () => {
         .send({ duration: GameDurationEnum.OneMinute });
 
       // Hack the database
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const gameModel = app.get(getModelToken('Game'));
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+
       await gameModel.findByIdAndUpdate(gameId, {
         lastMoveAt: new Date(Date.now() - 120000),
       });
@@ -388,12 +372,10 @@ describe('GameModule (e2e)', () => {
       app
         .listen(0)
         .then(async () => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
           const port = app.getHttpServer().address().port;
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           const { authUserId: player1Id } = await createPlayer(app);
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
           const { authUserId: player2Id } = await createPlayer(app);
 
           const res1 = await request(app.getHttpServer())
@@ -401,7 +383,6 @@ describe('GameModule (e2e)', () => {
             .set('x-user-id', player1Id)
             .send({ duration: GameDurationEnum.FiveMinutes });
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           const gameId = res1.body._id;
 
           await request(app.getHttpServer())
@@ -420,9 +401,8 @@ describe('GameModule (e2e)', () => {
           ioClient.on('game-updated', (payload: any) => {
             if (!moveMade) return;
 
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             expect(payload.game).toBeDefined();
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
             expect(payload.board).toBeDefined();
             done();
           });

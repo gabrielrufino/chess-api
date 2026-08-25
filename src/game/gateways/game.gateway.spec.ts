@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
@@ -76,7 +77,7 @@ describe(GameGateway.name, () => {
         mockClient as unknown as Socket,
       );
       expect(result).toEqual({ joined: false });
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+       
       expect(gameModel.findById).toHaveBeenCalledWith(validObjectId);
     });
 
