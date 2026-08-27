@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
 import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -32,11 +33,10 @@ describe('PlayerModule (e2e)', () => {
       .overrideGuard(AuthGuard)
       .useValue({
         canActivate: (context: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           const req = context.switchToHttp().getRequest();
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+
           const userId = req.headers['x-user-id'] || faker.datatype.uuid();
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+
           req.user = { sub: userId, isGuest: true };
           return true;
         },
@@ -47,11 +47,11 @@ describe('PlayerModule (e2e)', () => {
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     client = request(app.getHttpServer());
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     if (app) await app.close();
     if (mongod) await mongod.stop();
   });
@@ -66,11 +66,10 @@ describe('PlayerModule (e2e)', () => {
         .send({ nickname: 'SwiftKnight1234' })
         .expect(HttpStatus.CREATED);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res.body._id).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(res.body.nickname).toBe('SwiftKnight1234');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(res.body.isGuest).toBe(true);
     });
 
@@ -113,7 +112,6 @@ describe('PlayerModule (e2e)', () => {
         .send({ nickname })
         .expect(HttpStatus.CONFLICT);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res.body.message).toContain('already taken');
     });
   });
@@ -131,9 +129,8 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res.body.total).toBeGreaterThanOrEqual(1);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(Array.isArray(res.body.data)).toBe(true);
     });
 
@@ -156,9 +153,8 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', user1Id)
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res.body.total).toBe(1);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(res.body.data[0].nickname).toBe('SwiftKnight4321');
     });
 
@@ -170,9 +166,8 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(res.body.total).toBe(0);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(res.body.data).toEqual([]);
     });
   });
@@ -186,9 +181,8 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(typeof res.body.nickname).toBe('string');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(res.body.nickname.length).toBeGreaterThan(0);
     });
 
@@ -201,7 +195,6 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const suggestedNickname = suggestionRes.body.nickname;
 
       // Verify it's not taken (no player with that nickname yet)
@@ -210,8 +203,57 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(listRes.body.total).toBe(0);
+    });
+  });
+
+  describe('DELETE /players/nickname-suggestion/:nickname', () => {
+    it('should dismiss a nickname suggestion', async () => {
+      const authUserId = faker.datatype.uuid();
+
+      const suggestionRes = await client
+        .get('/players/nickname-suggestion')
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.OK);
+
+      const suggestedNickname = suggestionRes.body.nickname as string;
+
+      await client
+        .delete(`/players/nickname-suggestion/${suggestedNickname}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.NO_CONTENT);
+    });
+  });
+
+  describe('GET /players/:id', () => {
+    it('should return a player by id', async () => {
+      const authUserId = faker.datatype.uuid();
+
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'GetMe1234' })
+        .expect(HttpStatus.CREATED);
+
+      const playerId = createRes.body._id as string;
+
+      const getRes = await client
+        .get(`/players/${playerId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.OK);
+
+      expect(getRes.body._id).toBe(playerId);
+      expect(getRes.body.nickname).toBe('GetMe1234');
+    });
+
+    it('should return 404 when player does not exist', async () => {
+      const authUserId = faker.datatype.uuid();
+      const nonExistentId = '000000000000000000000001';
+
+      await client
+        .get(`/players/${nonExistentId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.NOT_FOUND);
     });
   });
   describe('DELETE /players/:id', () => {
@@ -224,7 +266,6 @@ describe('PlayerModule (e2e)', () => {
         .send({ nickname: 'DeleteMe1234' })
         .expect(HttpStatus.CREATED);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const playerId = createRes.body._id as string;
 
       const deleteRes = await client
@@ -232,7 +273,6 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(deleteRes.body._id).toBe(playerId);
     });
 
@@ -246,7 +286,6 @@ describe('PlayerModule (e2e)', () => {
         .send({ nickname: 'OwnerPlayer4321' })
         .expect(HttpStatus.CREATED);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const playerId = createRes.body._id as string;
 
       // Attacker tries to delete owner's player
@@ -271,6 +310,26 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', authUserId)
         .expect(HttpStatus.NOT_FOUND);
     });
+
+    it('should return 404 if player is deleted between find and remove (race condition)', async () => {
+      const authUserId = faker.datatype.uuid();
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'RaceDelete1234' })
+        .expect(HttpStatus.CREATED);
+
+      const playerId = createRes.body._id as string;
+      const { PlayerService } =
+        await import('../src/player/services/player.service');
+      const playerService = app.get(PlayerService);
+      jest.spyOn(playerService, 'removeIfOwner').mockResolvedValueOnce(null);
+
+      await client
+        .delete(`/players/${playerId}`)
+        .set('x-user-id', authUserId)
+        .expect(HttpStatus.NOT_FOUND);
+    });
   });
 
   describe('PATCH /players/:id', () => {
@@ -283,7 +342,6 @@ describe('PlayerModule (e2e)', () => {
         .send({ nickname: 'UpdateMe1234' })
         .expect(HttpStatus.CREATED);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const playerId = createRes.body._id as string;
 
       const updateRes = await client
@@ -292,9 +350,8 @@ describe('PlayerModule (e2e)', () => {
         .send({ nickname: 'UpdatedNick1234' })
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(updateRes.body._id).toBe(playerId);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       expect(updateRes.body.nickname).toBe('UpdatedNick1234');
     });
 
@@ -308,7 +365,6 @@ describe('PlayerModule (e2e)', () => {
         .send({ nickname: 'ProtectedPlayer4321' })
         .expect(HttpStatus.CREATED);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const playerId = createRes.body._id as string;
 
       // Attacker tries to update owner's player
@@ -324,7 +380,6 @@ describe('PlayerModule (e2e)', () => {
         .set('x-user-id', ownerUserId)
         .expect(HttpStatus.OK);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(getRes.body.nickname).toBe('ProtectedPlayer4321');
     });
 
@@ -343,13 +398,6 @@ describe('PlayerModule (e2e)', () => {
       const user1Id = faker.datatype.uuid();
       const user2Id = faker.datatype.uuid();
 
-      // User 1 takes a nickname
-      await client
-        .post('/players')
-        .set('x-user-id', user1Id)
-        .send({ nickname: 'AlreadyTaken1234' })
-        .expect(HttpStatus.CREATED);
-
       // User 2 creates their own player
       const createRes = await client
         .post('/players')
@@ -357,15 +405,47 @@ describe('PlayerModule (e2e)', () => {
         .send({ nickname: 'MyPlayer5678' })
         .expect(HttpStatus.CREATED);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       const playerId = createRes.body._id as string;
 
-      // User 2 tries to rename to user 1's nickname
+      // Mock the service to simulate a unique constraint violation
+      const { PlayerService } =
+        await import('../src/player/services/player.service');
+      const { NicknameAlreadyTakenException } =
+        await import('../src/player/exceptions/nickname-already-taken.exception');
+      const playerService = app.get(PlayerService);
+      jest
+        .spyOn(playerService, 'updateIfOwner')
+        .mockRejectedValueOnce(
+          new NicknameAlreadyTakenException('AlreadyTaken1234'),
+        );
+
+      // User 2 tries to rename to an already taken nickname
       await client
         .patch(`/players/${playerId}`)
         .set('x-user-id', user2Id)
         .send({ nickname: 'AlreadyTaken1234' })
         .expect(HttpStatus.CONFLICT);
+    });
+
+    it('should return 404 if player is deleted between find and update (race condition)', async () => {
+      const authUserId = faker.datatype.uuid();
+      const createRes = await client
+        .post('/players')
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'RaceUpdate1234' })
+        .expect(HttpStatus.CREATED);
+
+      const playerId = createRes.body._id as string;
+      const { PlayerService } =
+        await import('../src/player/services/player.service');
+      const playerService = app.get(PlayerService);
+      jest.spyOn(playerService, 'updateIfOwner').mockResolvedValueOnce(null);
+
+      await client
+        .patch(`/players/${playerId}`)
+        .set('x-user-id', authUserId)
+        .send({ nickname: 'RaceUpdate4321' })
+        .expect(HttpStatus.NOT_FOUND);
     });
   });
 });

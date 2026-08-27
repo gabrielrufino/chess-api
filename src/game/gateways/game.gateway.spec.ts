@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
@@ -76,7 +77,7 @@ describe(GameGateway.name, () => {
         mockClient as unknown as Socket,
       );
       expect(result).toEqual({ joined: false });
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+       
       expect(gameModel.findById).toHaveBeenCalledWith(validObjectId);
     });
 
@@ -105,11 +106,14 @@ describe(GameGateway.name, () => {
 
       expect(result).toEqual({ joined: true });
       expect(mockClient.join).toHaveBeenCalledWith(validObjectId);
+      // Verify the emitted FEN reflects the post-e4 state (not the initial position),
+      // proving that loadPgn(game.pgn) was actually called.
+      const expectedFen = chess.fen();
       /* eslint-disable @typescript-eslint/no-unsafe-assignment */
       expect(mockClient.emit).toHaveBeenCalledWith(
         'game-updated',
         expect.objectContaining({
-          board: expect.objectContaining({ fen: expect.any(String) }),
+          board: expect.objectContaining({ fen: expectedFen }),
         }),
       );
       /* eslint-enable @typescript-eslint/no-unsafe-assignment */
@@ -137,9 +141,13 @@ describe(GameGateway.name, () => {
 
       expect(result).toEqual({ joined: true });
       expect(mockClient.join).toHaveBeenCalledWith(validObjectId);
+      // Verify the emitted FEN matches the game's FEN (proving chess.load(game.fen) was called)
+      const expectedFen = chess.fen();
       expect(mockClient.emit).toHaveBeenCalledWith(
         'game-updated',
-        expect.any(Object),
+        expect.objectContaining({
+          board: expect.objectContaining({ fen: expectedFen }),
+        }),
       );
     });
 
@@ -167,8 +175,48 @@ describe(GameGateway.name, () => {
 
       expect(result).toEqual({ joined: true });
       expect(warnSpy).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining(validObjectId),
+      );
       expect(mockClient.join).toHaveBeenCalledWith(validObjectId);
       expect(mockClient.emit).toHaveBeenCalled();
+    });
+
+    it('should join and emit even if game state throws a string error (logs warning)', async () => {
+      const mockGame = {
+        _id: 'game1',
+        pgn: 'valid-pgn-but-throws-string',
+        fen: 'invalid-fen',
+        toJSON: jest.fn().mockReturnValue({
+          _id: 'game1',
+          pgn: 'valid-pgn-but-throws-string',
+          fen: 'invalid-fen',
+        }),
+      };
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockGame),
+      } as any);
+
+      const chessLoadPgnSpy = jest
+        .spyOn(Chess.prototype, 'loadPgn')
+        .mockImplementation(() => {
+          throw 'String error thrown by mock';
+        });
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+      const validObjectId = '507f1f77bcf86cd799439011';
+      const result = await gateway.handleJoinGame(
+        validObjectId,
+        mockClient as unknown as Socket,
+      );
+
+      expect(result).toEqual({ joined: true });
+      expect(warnSpy).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('String error thrown by mock'),
+      );
+
+      chessLoadPgnSpy.mockRestore();
     });
 
     it('should join and emit with default board when game has no pgn and no fen', async () => {

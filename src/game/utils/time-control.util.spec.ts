@@ -69,5 +69,27 @@ describe('TimeControlUtil', () => {
       const result = parseGameDuration('invalid-format');
       expect(result).toBeNull();
     });
+
+    it('should definitively return null (not a parsed value) for unlimited', () => {
+      expect(parseGameDuration(GameDurationEnum.Unlimited)).toBeNull();
+    });
+
+    it('should return a finite initialTimeMs for 1-minute format (not NaN)', () => {
+      const result = parseGameDuration(GameDurationEnum.OneMinute);
+      expect(result).not.toBeNull();
+      expect(Number.isFinite(result.initialTimeMs)).toBe(true);
+    });
+
+    it('should return exactly 300000ms for 5-minute format', () => {
+      const result = parseGameDuration(GameDurationEnum.FiveMinutes);
+      expect(result).not.toBeNull();
+      expect(result.initialTimeMs).toBe(300000);
+    });
+
+    it('should return exactly 600000ms for 10-minute format', () => {
+      const result = parseGameDuration(GameDurationEnum.TenMinutes);
+      expect(result).not.toBeNull();
+      expect(result.initialTimeMs).toBe(600000);
+    });
   });
 });

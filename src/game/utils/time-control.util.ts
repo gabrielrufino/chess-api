@@ -8,13 +8,12 @@ export interface TimeControl {
 export function parseGameDuration(
   duration: GameDurationEnum,
 ): TimeControl | null {
-  if (duration === GameDurationEnum.Unlimited) {
-    return null;
-  }
+  if (duration === GameDurationEnum.Unlimited) return null;
 
   // Handle 'Xmin' format
   if (duration.endsWith('min')) {
-    const minutes = parseInt(duration.replace('min', ''), 10);
+    const minutesStr = duration.replace('min', '');
+    const minutes = Number(minutesStr);
     return {
       initialTimeMs: minutes * 60 * 1000,
       incrementMs: 0,
@@ -24,8 +23,8 @@ export function parseGameDuration(
   // Handle 'X+Y' format
   if (duration.includes('+')) {
     const [minutesStr, incrementStr] = duration.split('+');
-    const minutes = parseInt(minutesStr, 10);
-    const incrementSeconds = parseInt(incrementStr, 10);
+    const minutes = Number(minutesStr);
+    const incrementSeconds = Number(incrementStr);
     return {
       initialTimeMs: minutes * 60 * 1000,
       incrementMs: incrementSeconds * 1000,

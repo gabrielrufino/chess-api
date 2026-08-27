@@ -16,8 +16,6 @@ export class GuestUserController {
   @Post()
   public async createGuestUser(): Promise<GuestUserResponseDto> {
     const guestUser = await this.guestUserService.createGuestUser();
-    return plainToInstance(GuestUserResponseDto, guestUser, {
-      excludeExtraneousValues: true,
-    });
+    return plainToInstance(GuestUserResponseDto, guestUser);
   }
 }

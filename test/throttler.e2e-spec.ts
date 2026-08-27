@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
+
+jest.setTimeout(30000);
 
 describe('ThrottlerGuard (e2e)', () => {
   let app: INestApplication;

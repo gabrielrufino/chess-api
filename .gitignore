@@ -38,3 +38,8 @@ lerna-debug.log*
 /documentation
 /e2e-coverage
 .env
+
+# Stryker
+.stryker-tmp/
+reports/mutation/
+
