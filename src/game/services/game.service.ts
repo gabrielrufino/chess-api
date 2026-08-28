@@ -377,4 +377,38 @@ export class GameService {
     }
     return chess;
   }
+
+  public async exportUserGamesToCsv(authUser: AuthUser): Promise<string> {
+    const player = await this.playerModel.findOne({ userId: authUser.sub });
+    if (!player) {
+      throw new NotFoundException('Player not found');
+    }
+
+    const games = await this.gameModel
+      .find({
+        $or: [{ whitePlayerId: player._id }, { blackPlayerId: player._id }],
+      })
+      .populate('whitePlayer')
+      .populate('blackPlayer')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const csvLines: string[] = ['Data,Adversario,Cor,Resultado,PGN'];
+
+    for (const game of games) {
+      const isWhite = game.whitePlayerId?.toString() === player._id.toString();
+      const rawOpponent = isWhite
+        ? (game as any).blackPlayer?.nickname || 'Desconhecido'
+        : (game as any).whitePlayer?.nickname || 'Desconhecido';
+      const opponent = `"${String(rawOpponent).replace(/"/g, '""')}"`;
+      const color = isWhite ? 'White' : 'Black';
+      const result = game.status;
+      const date = (game as any).createdAt ? (game as any).createdAt.toISOString() : '';
+
+      const pgnEscaped = (game.pgn || '').replace(/"/g, '""');
+      csvLines.push(`${date},${opponent},${color},${result},"${pgnEscaped}"`);
+    }
+
+    return csvLines.join('\n');
+  }
 }
