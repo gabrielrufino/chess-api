@@ -138,17 +138,12 @@ describe('Game Schema Integration', () => {
       whitePlayerId: player1._id,
     });
 
-    const populatedGame = await gameModel
-      .findById(game._id)
-      .populate('whitePlayer')
-      .exec();
-
+    const populatedGame = await gameModel.findById(game._id);
     /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
     const obj = populatedGame.toObject() as any;
 
     expect(obj.whitePlayer).toBeDefined();
     expect(obj.whitePlayer.userId).toBe('user1');
     expect(obj.id).toBeDefined();
-    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
   });
 });

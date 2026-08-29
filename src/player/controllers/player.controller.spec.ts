@@ -59,6 +59,7 @@ describe(PlayerController.name, () => {
       };
       jest.spyOn(service, 'create').mockResolvedValue(mockPlayer as any);
 
+      /* eslint-disable @typescript-eslint/no-unsafe-argument */
       const result = await controller.create(request as any, createDto);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -66,6 +67,7 @@ describe(PlayerController.name, () => {
       expect(result).toEqual(
         expect.objectContaining({ _id: '1', nickname: 'SwiftKnight1234' }),
       );
+      /* eslint-enable @typescript-eslint/no-unsafe-argument */
     });
 
     it('should propagate NicknameAlreadyTakenException from service', async () => {
@@ -75,9 +77,11 @@ describe(PlayerController.name, () => {
         .spyOn(service, 'create')
         .mockRejectedValue(new NicknameAlreadyTakenException('TakenNickname'));
 
+      /* eslint-disable @typescript-eslint/no-unsafe-argument */
       await expect(
         controller.create(request as any, createDto),
       ).rejects.toThrow(NicknameAlreadyTakenException);
+      /* eslint-enable @typescript-eslint/no-unsafe-argument */
     });
   });
 

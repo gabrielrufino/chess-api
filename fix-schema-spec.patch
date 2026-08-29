@@ -1,0 +1,11 @@
+--- src/game/schemas/game.schema.spec.ts
++++ src/game/schemas/game.schema.spec.ts
+@@ -140,7 +140,7 @@
+       .findById(game._id)
+       .populate('whitePlayer')
+       .exec();
+
+-    const obj = populatedGame.toObject() as any;
++    const obj = populatedGame!.toObject() as any;
+
+     expect(obj.whitePlayer).toBeDefined();

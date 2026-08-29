@@ -38,16 +38,17 @@ describe('GameService exportUserGamesToCsv', () => {
   it('should throw NotFoundException if player not found', async () => {
     /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     playerModel.findOne.mockResolvedValue(null);
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     await expect(
       service.exportUserGamesToCsv({ sub: 'user1' } as AuthUser),
     ).rejects.toThrow(NotFoundException);
-    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
   });
 
   it('should export user games to CSV correctly', async () => {
     /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     const mockPlayer = { _id: 'player1' };
     playerModel.findOne.mockResolvedValue(mockPlayer);
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 
     const mockGames = [
       {
@@ -70,6 +71,7 @@ describe('GameService exportUserGamesToCsv', () => {
       },
     ];
 
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     gameModel.lean.mockResolvedValue(mockGames);
 
     const csv = await service.exportUserGamesToCsv({
