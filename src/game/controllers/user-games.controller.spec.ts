@@ -3,6 +3,7 @@ import { UserGamesController } from './user-games.controller';
 import { GameService } from '../services/game.service';
 import { AuthGuard } from '../../auth/guards/auth.guard';
 import { Response } from 'express';
+import { AuthRequest } from '../../auth/interfaces/auth-user.interface';
 
 describe('UserGamesController', () => {
   let controller: UserGamesController;
@@ -34,8 +35,11 @@ describe('UserGamesController', () => {
 
   describe('exportGames', () => {
     it('should export user games as CSV', async () => {
-      const mockCsvData = 'Data,Adversário,Cor,Resultado,PGN\n2023-10-10,opponent1,White,WIN,1. e4';
-      jest.spyOn(gameService, 'exportUserGamesToCsv').mockResolvedValue(mockCsvData);
+      const mockCsvData =
+        'Data,Adversário,Cor,Resultado,PGN\n2023-10-10,opponent1,White,WIN,1. e4';
+      jest
+        .spyOn(gameService, 'exportUserGamesToCsv')
+        .mockResolvedValue(mockCsvData);
 
       const request = { user: { sub: 'user1' } };
       const response: Partial<Response> = {
@@ -44,10 +48,19 @@ describe('UserGamesController', () => {
         send: jest.fn(),
       };
 
-      await controller.exportGames(request as any, response as any);
+      await controller.exportGames(
+        request as unknown as AuthRequest,
+        response as unknown as Response,
+      );
 
-      expect(gameService.exportUserGamesToCsv).toHaveBeenCalledWith(request.user);
-      expect(response.setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(gameService.exportUserGamesToCsv).toHaveBeenCalledWith(
+        request.user,
+      );
+      expect(response.setHeader).toHaveBeenCalledWith(
+        'Content-Type',
+        'text/csv',
+      );
       expect(response.setHeader).toHaveBeenCalledWith(
         'Content-Disposition',
         'attachment; filename="meu_historico_xadrez.csv"',

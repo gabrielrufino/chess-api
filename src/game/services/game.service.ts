@@ -1,18 +1,17 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
-
-import { CreateGameDto } from '../dto/create-game.dto';
-import { CreateMoveDto } from '../dto/create-move.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Player, PlayerDocument } from 'src/player/schemas/player.schema';
 import { Game, GameDocument } from '../schemas/game.schema';
-import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
+import { Player, PlayerDocument } from '../../player/schemas/player.schema';
+import { CreateGameDto } from '../dto/create-game.dto';
+import { CreateMoveDto } from '../dto/create-move.dto';
+import { AuthUser } from '../../auth/interfaces/auth-user.interface';
 import { GameStatusEnum } from '../enumerables/game-status.enum';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { Chess } from 'chess.js';
@@ -397,13 +396,17 @@ export class GameService {
 
     for (const game of games) {
       const isWhite = game.whitePlayerId?.toString() === player._id.toString();
+      /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
       const rawOpponent = isWhite
-        ? (game as any).blackPlayer?.nickname || 'Desconhecido'
-        : (game as any).whitePlayer?.nickname || 'Desconhecido';
+        ? ((game as any).blackPlayer?.nickname ?? 'Desconhecido')
+        : ((game as any).whitePlayer?.nickname ?? 'Desconhecido');
       const opponent = `"${String(rawOpponent).replace(/"/g, '""')}"`;
       const color = isWhite ? 'White' : 'Black';
       const result = game.status;
-      const date = (game as any).createdAt ? (game as any).createdAt.toISOString() : '';
+      const date = (game as any).createdAt
+        ? (game as any).createdAt.toISOString()
+        : '';
+      /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
 
       const pgnEscaped = (game.pgn || '').replace(/"/g, '""');
       csvLines.push(`${date},${opponent},${color},${result},"${pgnEscaped}"`);

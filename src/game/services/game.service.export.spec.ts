@@ -36,13 +36,16 @@ describe('GameService exportUserGamesToCsv', () => {
   });
 
   it('should throw NotFoundException if player not found', async () => {
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     playerModel.findOne.mockResolvedValue(null);
     await expect(
       service.exportUserGamesToCsv({ sub: 'user1' } as AuthUser),
     ).rejects.toThrow(NotFoundException);
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
   });
 
   it('should export user games to CSV correctly', async () => {
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     const mockPlayer = { _id: 'player1' };
     playerModel.findOne.mockResolvedValue(mockPlayer);
 
@@ -69,10 +72,15 @@ describe('GameService exportUserGamesToCsv', () => {
 
     gameModel.lean.mockResolvedValue(mockGames);
 
-    const csv = await service.exportUserGamesToCsv({ sub: 'user1' } as AuthUser);
+    const csv = await service.exportUserGamesToCsv({
+      sub: 'user1',
+    } as AuthUser);
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 
     expect(csv).toContain('Data,Adversario,Cor,Resultado,PGN');
-    expect(csv).toContain('2023-10-10T10:00:00.000Z,"p2",White,CHECKMATE,"[Event ""Test Game""]\n1. e4"');
+    expect(csv).toContain(
+      '2023-10-10T10:00:00.000Z,"p2",White,CHECKMATE,"[Event ""Test Game""]\n1. e4"',
+    );
     expect(csv).toContain('2023-10-11T10:00:00.000Z,"p3",Black,DRAW,"1. d4"');
   });
 });
