@@ -1,0 +1,44 @@
+--- src/game/services/game.service.ts
++++ src/game/services/game.service.ts
+@@ -21,6 +21,12 @@
+ import { plainToInstance } from 'class-transformer';
+ import { GameDto } from '../dto/game-response.dto';
+
++interface PopulatedGame extends Game {
++  whitePlayer?: Player;
++  blackPlayer?: Player;
++  createdAt?: Date;
++}
++
+ @Injectable()
+ export class GameService {
+   private readonly logger = new Logger(GameService.name);
+@@ -387,23 +393,21 @@
+       .populate('whitePlayer')
+       .populate('blackPlayer')
+       .sort({ createdAt: -1 })
+-      .lean();
++      .lean<PopulatedGame[]>();
+
+     const csvLines: string[] = ['Data,Adversario,Cor,Resultado,PGN'];
+
+     for (const game of games) {
+       const isWhite = game.whitePlayerId?.toString() === player._id.toString();
+-      /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+       const rawOpponent = isWhite
+-        ? ((game as any).blackPlayer?.nickname ?? 'Desconhecido')
+-        : ((game as any).whitePlayer?.nickname ?? 'Desconhecido');
++        ? (game.blackPlayer?.nickname ?? 'Desconhecido')
++        : (game.whitePlayer?.nickname ?? 'Desconhecido');
+       const opponent = `"${String(rawOpponent).replace(/"/g, '""')}"`;
+       const color = isWhite ? 'White' : 'Black';
+       const result = game.status;
+-      const date = (game as any).createdAt
+-        ? (game as any).createdAt.toISOString()
++      const date = game.createdAt
++        ? game.createdAt.toISOString()
+         : '';
+-      /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
+
+       const pgnEscaped = (game.pgn || '').replace(/"/g, '""');
+       csvLines.push(`${date},${opponent},${color},${result},"${pgnEscaped}"`);

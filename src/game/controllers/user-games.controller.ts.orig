@@ -1,12 +1,6 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Request,
-  Header,
-  StreamableFile,
-} from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOkResponse } from '@nestjs/swagger';
+import { Response } from 'express';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
 import { GameService } from '../services/game.service';
@@ -29,16 +23,18 @@ export class UserGamesController {
     },
   })
   @Get('export')
-  @Header('Content-Type', 'text/csv')
-  @Header(
-    'Content-Disposition',
-    'attachment; filename="meu_historico_xadrez.csv"',
-  )
   public async exportGames(
     @Request() request: AuthRequest,
-  ): Promise<StreamableFile> {
+    @Res() res: Response,
+  ): Promise<void> {
     const csvData = await this.gameService.exportUserGamesToCsv(request.user);
 
-    return new StreamableFile(Buffer.from(csvData));
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="meu_historico_xadrez.csv"',
+    );
+
+    res.status(200).send(csvData);
   }
 }
