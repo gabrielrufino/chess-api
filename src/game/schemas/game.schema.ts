@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { HydratedDocument } from 'mongoose';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { GameStatusEnum } from '../enumerables/game-status.enum';
+import { Player } from '../../player/schemas/player.schema';
 
 export type GameDocument = HydratedDocument<Game>;
 
@@ -36,6 +37,10 @@ export class Game {
 
   @Prop({ required: false })
   lastMoveAt?: Date;
+
+  whitePlayer?: Player;
+  blackPlayer?: Player;
+  createdAt?: Date;
 }
 
 export const GameSchema = SchemaFactory.createForClass(Game);

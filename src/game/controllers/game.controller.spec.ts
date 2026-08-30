@@ -69,11 +69,13 @@ describe(GameController.name, () => {
       };
       jest.spyOn(service, 'create').mockResolvedValue(mockGame as any);
 
+      /* eslint-disable @typescript-eslint/no-unsafe-argument */
       const result = await controller.create(request as any, createGameDto);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(service.create).toHaveBeenCalledWith(createGameDto, request.user);
       expect(result).toEqual(expect.objectContaining({ _id: 'game1' }));
+      /* eslint-enable @typescript-eslint/no-unsafe-argument */
     });
   });
 
@@ -105,11 +107,13 @@ describe(GameController.name, () => {
     const mockGame = { _id: '1', toJSON: () => ({ _id: '1' }) };
     jest.spyOn(service, 'makeMove').mockResolvedValue(mockGame as any);
 
+    /* eslint-disable @typescript-eslint/no-unsafe-argument */
     const result = await controller.makeMove(
       request as any,
       '1',
       createMoveDto,
     );
+    /* eslint-enable @typescript-eslint/no-unsafe-argument */
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(service.makeMove).toHaveBeenCalledWith(
@@ -177,7 +181,9 @@ describe(GameController.name, () => {
       const mockGame = { _id: 'game1', toJSON: () => ({ _id: 'game1' }) };
       jest.spyOn(service, 'claimTimeout').mockResolvedValue(mockGame as any);
 
+      /* eslint-disable @typescript-eslint/no-unsafe-argument */
       const result = await controller.claimTimeout(request as any, 'game1');
+      /* eslint-enable @typescript-eslint/no-unsafe-argument */
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(service.claimTimeout).toHaveBeenCalledWith('game1', request.user);
