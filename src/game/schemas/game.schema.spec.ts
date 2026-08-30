@@ -30,7 +30,7 @@ describe('Game Schema Integration', () => {
 
     gameModel = module.get<Model<GameDocument>>(getModelToken(Game.name));
     playerModel = module.get<Model<Player>>(getModelToken(Player.name));
-  });
+  }, 60000);
 
   afterAll(async () => {
     if (module) {
@@ -39,11 +39,15 @@ describe('Game Schema Integration', () => {
     if (mongod) {
       await mongod.stop();
     }
-  });
+  }, 60000);
 
   afterEach(async () => {
-    await gameModel.deleteMany({});
-    await playerModel.deleteMany({});
+    if (gameModel) {
+      await gameModel.deleteMany({});
+    }
+    if (playerModel) {
+      await playerModel.deleteMany({});
+    }
   });
 
   it('should be defined', () => {
