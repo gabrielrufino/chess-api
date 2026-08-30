@@ -405,15 +405,25 @@ export class GameService {
       const rawOpponent = isWhite
         ? (game.blackPlayer?.nickname ?? 'Desconhecido')
         : (game.whitePlayer?.nickname ?? 'Desconhecido');
-      const opponent = `"${String(rawOpponent).replace(/"/g, '""')}"`;
+      const opponent = this.escapeCsvCell(rawOpponent);
       const color = isWhite ? 'White' : 'Black';
       const result = game.status;
       const date = game.createdAt ? game.createdAt.toISOString() : '';
 
-      const pgnEscaped = (game.pgn || '').replace(/"/g, '""');
-      csvLines.push(`${date},${opponent},${color},${result},"${pgnEscaped}"`);
+      const pgn = this.escapeCsvCell(game.pgn || '');
+      csvLines.push(`${date},${opponent},${color},${result},${pgn}`);
     }
 
     return csvLines.join('\n');
+  }
+
+  private escapeCsvCell(value?: string | null): string {
+    const stringValue = value ?? '';
+    const formulaPrefixes = ['=', '+', '-', '@', '\t', '\r'];
+    const hasFormulaPrefix = formulaPrefixes.some((prefix) =>
+      stringValue.startsWith(prefix),
+    );
+    const sanitized = hasFormulaPrefix ? `'${stringValue}` : stringValue;
+    return `"${sanitized.replace(/"/g, '""')}"`;
   }
 }
