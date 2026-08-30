@@ -20,7 +20,7 @@ Target **only** `patch` and `minor` updates. Do not update `major` versions unle
 
 Before installing any new package version, verify its safety:
 
-- **Doubtful Origin/Provenance:** Use `npm view <package_name>` to verify the repository, maintainers, and if it has provenance linked. Be wary of packages that have suddenly changed owners or lack a repository link.
+- **Doubtful Origin/Provenance:** Use `npm view <package_name>@<target_version>` to verify the repository, maintainers, and if it has provenance linked (especially when `target_version` is not `latest`, so checks apply to the version being installed). Be wary of packages that have suddenly changed owners or lack a repository link.
   _(Note: Minimum release age is already configured in `.npmrc` as `min-release-age=7`, so `npm install` will automatically block packages newer than 7 days)._
 
 ## 3. Capture Audit Baseline & Apply Updates
