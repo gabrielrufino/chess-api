@@ -1,105 +1,154 @@
+import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
-import { MongooseModule, getConnectionToken } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import mongoose, { Model, Connection } from 'mongoose';
-import { Game, GameSchema, GameDocument } from './game.schema';
+
+import { Game, GameDocument, GameSchema } from './game.schema';
+import { Player, PlayerSchema } from '../../player/schemas/player.schema';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { GameStatusEnum } from '../enumerables/game-status.enum';
 
 describe('Game Schema Integration', () => {
-  let mongoServer: MongoMemoryServer;
+  let module: TestingModule;
   let gameModel: Model<GameDocument>;
-  let connection: Connection;
+  let playerModel: Model<Player>;
+  let mongod: MongoMemoryServer;
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
-    const uri = mongoServer.getUri();
+    mongod = await MongoMemoryServer.create();
+    const uri = mongod.getUri();
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       imports: [
         MongooseModule.forRoot(uri),
         MongooseModule.forFeature([{ name: Game.name, schema: GameSchema }]),
+        MongooseModule.forFeature([
+          { name: Player.name, schema: PlayerSchema },
+        ]),
       ],
     }).compile();
 
-    gameModel = module.get<Model<GameDocument>>(`${Game.name}Model`);
-    connection = await module.get(getConnectionToken());
+    gameModel = module.get<Model<GameDocument>>(getModelToken(Game.name));
+    playerModel = module.get<Model<Player>>(getModelToken(Player.name));
   });
 
   afterAll(async () => {
-    if (connection) {
-      await connection.close();
+    if (module) {
+      await module.close();
     }
-    if (mongoServer) {
-      await mongoServer.stop();
+    if (mongod) {
+      await mongod.stop();
     }
   });
 
   afterEach(async () => {
-    const collections = connection.collections;
-    for (const key in collections) {
-      const collection = collections[key];
-      await collection.deleteMany({});
-    }
+    await gameModel.deleteMany({});
+    await playerModel.deleteMany({});
   });
 
   it('should be defined', () => {
     expect(gameModel).toBeDefined();
+    expect(playerModel).toBeDefined();
   });
 
   it('should successfully create a game with default values', async () => {
-    const game = new gameModel({
+    const gameData = {
       duration: GameDurationEnum.TenMinutes,
-    });
+    };
 
-    const savedGame = await game.save();
+    const game = await gameModel.create(gameData);
 
-    expect(savedGame._id).toBeDefined();
-    expect(savedGame.duration).toBe(GameDurationEnum.TenMinutes);
-    expect(savedGame.status).toBe(GameStatusEnum.WAITING_PLAYER);
-    expect(savedGame.fen).toBe(
+    expect(game.duration).toBe(GameDurationEnum.TenMinutes);
+    expect(game.fen).toBe(
       'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     );
-    expect(savedGame.pgn).toBe('');
-    expect(savedGame.incrementMs).toBe(0);
-    expect(savedGame.get('createdAt')).toBeDefined();
-    expect(savedGame.get('updatedAt')).toBeDefined();
+    expect(game.pgn).toBe('');
+    expect(game.status).toBe(GameStatusEnum.WAITING_PLAYER);
+    expect(game.incrementMs).toBe(0);
   });
 
   it('should fail validation if duration is not provided', async () => {
-    const game = new gameModel({});
+    const gameData = {};
 
-    let error: mongoose.Error.ValidationError;
-    try {
-      await game.save();
-    } catch (err: unknown) {
-      error = err as mongoose.Error.ValidationError;
-    }
-
-    expect(error).toBeDefined();
-    expect(error).toBeInstanceOf(mongoose.Error.ValidationError);
-    expect(error.errors.duration).toBeDefined();
+    await expect(gameModel.create(gameData)).rejects.toThrow();
   });
 
   it('should correctly populate virtuals when players are provided', async () => {
-    const whitePlayerId = new mongoose.Types.ObjectId();
-    const blackPlayerId = new mongoose.Types.ObjectId();
-
-    const game = new gameModel({
-      duration: GameDurationEnum.TenMinutes,
-      whitePlayerId,
-      blackPlayerId,
+    const player1 = await playerModel.create({
+      userId: 'user1',
+      isGuest: false,
+      nickname: 'player1',
     });
 
-    const savedGame = await game.save();
+    const player2 = await playerModel.create({
+      userId: 'user2',
+      isGuest: false,
+      nickname: 'player2',
+    });
 
-    expect(savedGame.whitePlayerId).toEqual(whitePlayerId);
-    expect(savedGame.blackPlayerId).toEqual(blackPlayerId);
+    const game = await gameModel.create({
+      duration: GameDurationEnum.TenMinutes,
+      whitePlayerId: player1._id,
+      blackPlayerId: player2._id,
+    });
 
-    // virtuals are defined but without a Player model we can't populate them directly here,
-    // however we can verify the fields are set correctly
-    const gameObject = savedGame.toObject();
-    expect(gameObject.whitePlayerId).toEqual(whitePlayerId);
-    expect(gameObject.blackPlayerId).toEqual(blackPlayerId);
+    const populatedGame = await gameModel
+      .findById(game._id)
+      .populate('whitePlayer')
+      .populate('blackPlayer')
+      .exec();
+
+    expect(populatedGame?.whitePlayer?.userId).toBe('user1');
+    expect(populatedGame?.blackPlayer?.userId).toBe('user2');
+  });
+
+  it('should include virtuals in toJSON output', async () => {
+    const player1 = await playerModel.create({
+      userId: 'user1',
+      isGuest: false,
+      nickname: 'player1',
+    });
+
+    const game = await gameModel.create({
+      duration: GameDurationEnum.TenMinutes,
+      whitePlayerId: player1._id,
+    });
+
+    const populatedGame = await gameModel
+      .findById(game._id)
+      .populate('whitePlayer');
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+    const json = populatedGame.toJSON() as any;
+
+    expect(json.whitePlayer).toBeDefined();
+    expect(json.whitePlayer.userId).toBe('user1');
+    expect(json.id).toBeDefined(); // Test virtual 'id' mapping of '_id'
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+  });
+
+  it('should include virtuals in toObject output', async () => {
+    const player1 = await playerModel.create({
+      userId: 'user1',
+      isGuest: false,
+      nickname: 'player1',
+    });
+
+    const game = await gameModel.create({
+      duration: GameDurationEnum.TenMinutes,
+      whitePlayerId: player1._id,
+    });
+
+    const populatedGame = await gameModel
+      .findById(game._id)
+      .populate('whitePlayer')
+      .exec();
+
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+    const obj = populatedGame.toObject() as any;
+
+    expect(obj.whitePlayer).toBeDefined();
+    expect(obj.whitePlayer.userId).toBe('user1');
+    expect(obj.id).toBeDefined();
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
   });
 });

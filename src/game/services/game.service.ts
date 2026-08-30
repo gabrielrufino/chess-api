@@ -1,18 +1,17 @@
 import {
-  Injectable,
-  NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
-
-import { CreateGameDto } from '../dto/create-game.dto';
-import { CreateMoveDto } from '../dto/create-move.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Player, PlayerDocument } from 'src/player/schemas/player.schema';
 import { Game, GameDocument } from '../schemas/game.schema';
-import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
+import { Player, PlayerDocument } from '../../player/schemas/player.schema';
+import { CreateGameDto } from '../dto/create-game.dto';
+import { CreateMoveDto } from '../dto/create-move.dto';
+import { AuthUser } from '../../auth/interfaces/auth-user.interface';
 import { GameStatusEnum } from '../enumerables/game-status.enum';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { Chess } from 'chess.js';
@@ -20,6 +19,12 @@ import { parseGameDuration } from '../utils/time-control.util';
 import { GameGateway } from '../gateways/game.gateway';
 import { plainToInstance } from 'class-transformer';
 import { GameDto } from '../dto/game-response.dto';
+
+interface PopulatedGame extends Game {
+  whitePlayer?: Player;
+  blackPlayer?: Player;
+  createdAt?: Date;
+}
 
 @Injectable()
 export class GameService {
@@ -376,5 +381,39 @@ export class GameService {
       throw new BadRequestException('Invalid or corrupted game state');
     }
     return chess;
+  }
+
+  public async exportUserGamesToCsv(authUser: AuthUser): Promise<string> {
+    const player = await this.playerModel.findOne({ userId: authUser.sub });
+    if (!player) {
+      throw new NotFoundException('Player not found');
+    }
+
+    const games = await this.gameModel
+      .find({
+        $or: [{ whitePlayerId: player._id }, { blackPlayerId: player._id }],
+      })
+      .populate('whitePlayer')
+      .populate('blackPlayer')
+      .sort({ createdAt: -1 })
+      .lean<PopulatedGame[]>();
+
+    const csvLines: string[] = ['Data,Adversario,Cor,Resultado,PGN'];
+
+    for (const game of games) {
+      const isWhite = game.whitePlayerId?.toString() === player._id.toString();
+      const rawOpponent = isWhite
+        ? (game.blackPlayer?.nickname ?? 'Desconhecido')
+        : (game.whitePlayer?.nickname ?? 'Desconhecido');
+      const opponent = `"${String(rawOpponent).replace(/"/g, '""')}"`;
+      const color = isWhite ? 'White' : 'Black';
+      const result = game.status;
+      const date = game.createdAt ? game.createdAt.toISOString() : '';
+
+      const pgnEscaped = (game.pgn || '').replace(/"/g, '""');
+      csvLines.push(`${date},${opponent},${color},${result},"${pgnEscaped}"`);
+    }
+
+    return csvLines.join('\n');
   }
 }
