@@ -165,6 +165,7 @@ describe(GameService.name, () => {
 
       expect(findOneAndUpdateSpy).toHaveBeenCalledWith(
         {
+          status: GameStatusEnum.WAITING_PLAYER,
           blackPlayerId: null,
           whitePlayerId: { $ne: mockPlayer._id },
           duration: GameDurationEnum.FiveMinutes,
@@ -1488,7 +1489,7 @@ describe(GameService.name, () => {
       await expect(
         service.makeMove('1', { move: 'e4' }, { sub: 'user-abc' } as any),
       ).rejects.toThrow(NotFoundException);
-      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'user-abc' });
+      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'user-abc', deletedAt: null });
     });
   });
 
@@ -1507,7 +1508,7 @@ describe(GameService.name, () => {
           { sub: 'specific-user' } as any,
         ),
       ).rejects.toThrow(NotFoundException);
-      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'specific-user' });
+      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'specific-user', deletedAt: null });
     });
 
     it('should throw "Player not found" with exact message in create', async () => {
@@ -1538,7 +1539,7 @@ describe(GameService.name, () => {
       await expect(
         service.claimTimeout('1', { sub: 'specific-user' } as any),
       ).rejects.toThrow(NotFoundException);
-      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'specific-user' });
+      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'specific-user', deletedAt: null });
     });
   });
 

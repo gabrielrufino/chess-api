@@ -41,6 +41,7 @@ export class GameService {
   public async create(createGameDto: CreateGameDto, authUser: AuthUser) {
     const player = await this.playerModel.findOne({
       userId: authUser.sub,
+      deletedAt: null,
     });
 
     if (!player) {
@@ -51,6 +52,7 @@ export class GameService {
 
     const gameWaitingPlayer = await this.gameModel.findOneAndUpdate(
       {
+        status: GameStatusEnum.WAITING_PLAYER,
         blackPlayerId: null,
         whitePlayerId: { $ne: player._id },
         duration: createGameDto.duration,
@@ -156,7 +158,7 @@ export class GameService {
     const rawGame = await this.gameModel.findById(id);
     const game = this.validateGameForMove(rawGame);
 
-    const rawPlayer = await this.playerModel.findOne({ userId: authUser.sub });
+    const rawPlayer = await this.playerModel.findOne({ userId: authUser.sub, deletedAt: null });
     if (!rawPlayer) {
       throw new NotFoundException('Player not found');
     }
@@ -287,7 +289,7 @@ export class GameService {
       throw new BadRequestException('Game is not full yet');
     }
 
-    const player = await this.playerModel.findOne({ userId: authUser.sub });
+    const player = await this.playerModel.findOne({ userId: authUser.sub, deletedAt: null });
     if (!player) {
       throw new NotFoundException('Player not found');
     }
@@ -384,7 +386,7 @@ export class GameService {
   }
 
   public async exportUserGamesToCsv(authUser: AuthUser): Promise<string> {
-    const player = await this.playerModel.findOne({ userId: authUser.sub });
+    const player = await this.playerModel.findOne({ userId: authUser.sub, deletedAt: null });
     if (!player) {
       throw new NotFoundException('Player not found');
     }

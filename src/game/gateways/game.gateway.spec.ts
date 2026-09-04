@@ -1,3 +1,4 @@
+import { JwtService } from '@nestjs/jwt';
 /* eslint-disable */
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { Model } from 'mongoose';
 describe(GameGateway.name, () => {
   let gateway: GameGateway;
   let gameModel: Model<GameDocument>;
+  let jwtService: JwtService;
 
   const mockServer = {
     to: jest.fn().mockReturnThis(),
@@ -34,6 +36,10 @@ describe(GameGateway.name, () => {
         {
           provide: getModelToken(Game.name),
           useValue: gameModel,
+        },
+        {
+          provide: JwtService,
+          useValue: { verifyAsync: jest.fn() },
         },
       ],
     }).compile();

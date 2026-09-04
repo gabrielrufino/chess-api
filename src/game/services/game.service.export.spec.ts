@@ -43,7 +43,7 @@ describe('GameService exportUserGamesToCsv', () => {
       service.exportUserGamesToCsv({ sub: 'user1' } as AuthUser),
     ).rejects.toThrow(new NotFoundException('Player not found'));
     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-    expect(playerModel.findOne).toHaveBeenCalledWith({ userId: 'user1' });
+    expect(playerModel.findOne).toHaveBeenCalledWith({ userId: 'user1', deletedAt: null });
     /* eslint-enable @typescript-eslint/no-unsafe-member-access */
   });
 
@@ -83,7 +83,7 @@ describe('GameService exportUserGamesToCsv', () => {
     /* eslint-enable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 
     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-    expect(playerModel.findOne).toHaveBeenCalledWith({ userId: 'user1' });
+    expect(playerModel.findOne).toHaveBeenCalledWith({ userId: 'user1', deletedAt: null });
     expect(gameModel.find).toHaveBeenCalledWith({
       $or: [{ whitePlayerId: 'player1' }, { blackPlayerId: 'player1' }],
     });
