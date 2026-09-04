@@ -7,9 +7,11 @@ import {
   MongooseHealthIndicator,
 } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags('HealthCheck')
 @SkipThrottle()
+@Public()
 @Controller()
 export class AppController {
   constructor(
