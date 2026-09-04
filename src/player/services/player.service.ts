@@ -30,6 +30,14 @@ export class PlayerService {
   ) {}
 
   public async create(authUser: AuthUser, createPlayerDto: CreatePlayerDto) {
+    const reservedUserId = await this.cacheManager.get<string>(
+      this.nicknameReserveKey(createPlayerDto.nickname)
+    );
+
+    if (reservedUserId && reservedUserId !== authUser.sub) {
+      throw new NicknameAlreadyTakenException(createPlayerDto.nickname);
+    }
+
     const existing = await this.playerModel.findOne({
       nickname: createPlayerDto.nickname,
       deletedAt: null,
@@ -73,7 +81,10 @@ export class PlayerService {
 
     const [total, players] = await Promise.all([
       this.playerModel.countDocuments(filter),
-      this.playerModel.find(filter).lean(),
+      this.playerModel.find(filter)
+        .skip(query?.skip ?? 0)
+        .limit(query?.limit ?? 10)
+        .lean(),
     ]);
 
     return {
@@ -111,6 +122,16 @@ export class PlayerService {
     userId: string,
     updatePlayerDto: UpdatePlayerDto,
   ): Promise<PlayerDocument | null> {
+    if (updatePlayerDto.nickname) {
+      const reservedUserId = await this.cacheManager.get<string>(
+        this.nicknameReserveKey(updatePlayerDto.nickname)
+      );
+
+      if (reservedUserId && reservedUserId !== userId) {
+        throw new NicknameAlreadyTakenException(updatePlayerDto.nickname);
+      }
+    }
+
     try {
       const player = await this.playerModel.findOneAndUpdate(
         { _id: id, userId, deletedAt: null },
@@ -196,7 +217,7 @@ export class PlayerService {
       this.nicknameReserveKey(nickname),
     );
     // Only the user who reserved the nickname can dismiss it
-    if (owner !== null && owner !== userId) return;
+    if (!owner || owner !== userId) return;
     await this.cacheManager.del(this.nicknameReserveKey(nickname));
   }
 

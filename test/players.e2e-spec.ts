@@ -11,30 +11,34 @@ import TestAgent from 'supertest/lib/agent';
 import { AuthModule } from '../src/auth/auth.module';
 import { AuthGuard } from '../src/auth/guards/auth.guard';
 import { PlayerModule } from '../src/player/player.module';
+import { AppModule } from '../src/app.module';
 
 describe('PlayerModule (e2e)', () => {
   let app: INestApplication;
   let client: TestAgent;
   let mongod: MongoMemoryServer;
+  let connection: mongoose.Connection;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();
     process.env.JWT_SECRET = 'test-secret';
 
-    const moduleRef = await Test.createTestingModule({
+    const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         MongooseModule.forRoot(uri),
         CacheModule.register({ isGlobal: true }),
+        AppModule,
         AuthModule,
         PlayerModule,
       ],
     })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
       .overrideGuard(AuthGuard)
       .useValue({
-        canActivate: (context: any) => {
+        canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
-
           const userId = req.headers['x-user-id'] || faker.datatype.uuid();
 
           req.user = { sub: userId, isGuest: true };
@@ -43,16 +47,23 @@ describe('PlayerModule (e2e)', () => {
       })
       .compile();
 
-    app = moduleRef.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe());
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
     await app.init();
 
     client = request(app.getHttpServer());
+    connection = moduleFixture.get(getConnectionToken());
   });
 
   afterEach(async () => {
-    jest.restoreAllMocks();
-    if (app) await app.close();
+    const collections = connection.collections;
+    for (const key in collections) {
+      await collections[key].deleteMany({});
+    }
+  });
+
+  afterAll(async () => {
+    await app.close();
     if (mongod) await mongod.stop();
   });
 

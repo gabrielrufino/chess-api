@@ -5,13 +5,25 @@ export type PlayerDocument = HydratedDocument<Player>;
 
 @Schema({ timestamps: true, collection: 'players' })
 export class Player {
-  @Prop({ unique: true, required: true })
+  @Prop({
+    required: true,
+    index: {
+      unique: true,
+      partialFilterExpression: { deletedAt: null },
+    },
+  })
   userId: string;
 
   @Prop({ required: true })
   isGuest: boolean;
 
-  @Prop({ unique: true, required: true, sparse: true })
+  @Prop({
+    required: true,
+    index: {
+      unique: true,
+      partialFilterExpression: { deletedAt: null },
+    },
+  })
   nickname: string;
 
   @Prop()
