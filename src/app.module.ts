@@ -12,6 +12,7 @@ import { GameModule } from './game/game.module';
 import { PlayerModule } from './player/player.module';
 import { AuthModule } from './auth/auth.module';
 import { GuestUserModule } from './guest-user/guest-user.module';
+import { AuthGuard } from './auth/guards/auth.guard';
 
 @Module({
   imports: [
@@ -44,6 +45,10 @@ import { GuestUserModule } from './guest-user/guest-user.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
     },
   ],
 })
