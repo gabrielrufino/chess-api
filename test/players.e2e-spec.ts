@@ -16,8 +16,6 @@ import TestAgent from 'supertest/lib/agent';
 import { AuthModule } from '../src/auth/auth.module';
 import { AuthGuard } from '../src/auth/guards/auth.guard';
 import { PlayerModule } from '../src/player/player.module';
-import { AppModule } from '../src/app.module';
-import { ThrottlerGuard } from '@nestjs/throttler';
 
 describe('PlayerModule (e2e)', () => {
   let app: INestApplication;
@@ -28,19 +26,17 @@ describe('PlayerModule (e2e)', () => {
   beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();
+    process.env.DATABASE_URL = uri;
     process.env.JWT_SECRET = 'test-secret';
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         MongooseModule.forRoot(uri),
         CacheModule.register({ isGlobal: true }),
-        AppModule,
         AuthModule,
         PlayerModule,
       ],
     })
-      .overrideGuard(ThrottlerGuard)
-      .useValue({ canActivate: () => true })
       .overrideGuard(AuthGuard)
       .useValue({
         canActivate: (context: ExecutionContext) => {
@@ -64,14 +60,17 @@ describe('PlayerModule (e2e)', () => {
   });
 
   afterEach(async () => {
-    const collections = connection.collections;
-    for (const key in collections) {
-      await collections[key].deleteMany({});
+    if (connection) {
+      const collections = connection.collections;
+      for (const key in collections) {
+        await collections[key].deleteMany({});
+      }
     }
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) await app.close();
+    if (connection) await connection.close();
     if (mongod) await mongod.stop();
   });
 
