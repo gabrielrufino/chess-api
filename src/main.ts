@@ -62,6 +62,7 @@ async function bootstrap() {
     app
       .get(Logger)
       .error(error instanceof Error ? error.message : String(error));
+    throw error;
   }
 
   await app.listen(process.env.HTTP_SERVER_PORT || 3000);
