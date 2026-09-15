@@ -48,6 +48,7 @@ describe(GameGateway.name, () => {
     }).compile();
 
     gateway = module.get<GameGateway>(GameGateway);
+    jwtService = module.get<JwtService>(JwtService);
     // inject mock server
     gateway.server = mockServer as unknown as Server;
 
@@ -59,6 +60,31 @@ describe(GameGateway.name, () => {
   });
 
   describe(GameGateway.prototype.handleJoinGame.name, () => {
+    it('should return `{ joined: false, error: "Unauthorized" }` when token is missing', async () => {
+      const clientWithoutToken = {
+        join: jest.fn(),
+        emit: jest.fn(),
+        handshake: { auth: {} },
+      };
+      const result = await gateway.handleJoinGame(
+        '507f1f77bcf86cd799439011',
+        clientWithoutToken as unknown as Socket,
+      );
+      expect(result).toEqual({ joined: false, error: 'Unauthorized' });
+    });
+
+    it('should return `{ joined: false, error: "Unauthorized" }` when token verification rejects', async () => {
+      jest
+        .spyOn(jwtService, 'verifyAsync')
+        .mockRejectedValueOnce(new Error('Invalid token'));
+
+      const result = await gateway.handleJoinGame(
+        '507f1f77bcf86cd799439011',
+        mockClient as unknown as Socket,
+      );
+      expect(result).toEqual({ joined: false, error: 'Unauthorized' });
+    });
+
     it('should return `{ joined: false }` when gameId is empty', async () => {
       const result = await gateway.handleJoinGame(
         '',
