@@ -23,6 +23,9 @@ describe(GameGateway.name, () => {
   const mockClient = {
     join: jest.fn(),
     emit: jest.fn(),
+    handshake: {
+      auth: { token: 'valid-token' },
+    },
   };
 
   beforeEach(async () => {

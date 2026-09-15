@@ -1489,7 +1489,10 @@ describe(GameService.name, () => {
       await expect(
         service.makeMove('1', { move: 'e4' }, { sub: 'user-abc' } as any),
       ).rejects.toThrow(NotFoundException);
-      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'user-abc', deletedAt: null });
+      expect(findOneSpy).toHaveBeenCalledWith({
+        userId: 'user-abc',
+        deletedAt: null,
+      });
     });
   });
 
@@ -1508,7 +1511,10 @@ describe(GameService.name, () => {
           { sub: 'specific-user' } as any,
         ),
       ).rejects.toThrow(NotFoundException);
-      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'specific-user', deletedAt: null });
+      expect(findOneSpy).toHaveBeenCalledWith({
+        userId: 'specific-user',
+        deletedAt: null,
+      });
     });
 
     it('should throw "Player not found" with exact message in create', async () => {
@@ -1539,7 +1545,10 @@ describe(GameService.name, () => {
       await expect(
         service.claimTimeout('1', { sub: 'specific-user' } as any),
       ).rejects.toThrow(NotFoundException);
-      expect(findOneSpy).toHaveBeenCalledWith({ userId: 'specific-user', deletedAt: null });
+      expect(findOneSpy).toHaveBeenCalledWith({
+        userId: 'specific-user',
+        deletedAt: null,
+      });
     });
   });
 

@@ -63,7 +63,10 @@ describe(PlayerController.name, () => {
       const result = await controller.create(request.user as any, createDto);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(service.create).toHaveBeenCalledWith(request.user as any, createDto);
+      expect(service.create).toHaveBeenCalledWith(
+        request.user as any,
+        createDto,
+      );
       expect(result).toEqual(
         expect.objectContaining({ _id: '1', nickname: 'SwiftKnight1234' }),
       );
@@ -131,7 +134,10 @@ describe(PlayerController.name, () => {
     it('should dismiss a nickname suggestion', async () => {
       const request = { user: { sub: 'user-id' } };
       const nickname = 'BoldRook5678';
-      await controller.dismissNicknameReservation(request.user as any, nickname);
+      await controller.dismissNicknameReservation(
+        request.user as any,
+        nickname,
+      );
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(service.dismissNicknameReservation).toHaveBeenCalledWith(
@@ -196,7 +202,9 @@ describe(PlayerController.name, () => {
       jest.spyOn(service, 'findOne').mockResolvedValue(mockPlayer as any);
 
       await expect(
-        controller.update(request.user as any, '1', { nickname: 'NewNick1234' }),
+        controller.update(request.user as any, '1', {
+          nickname: 'NewNick1234',
+        }),
       ).rejects.toThrow('You are not allowed to update this player');
     });
 
@@ -205,7 +213,9 @@ describe(PlayerController.name, () => {
       jest.spyOn(service, 'findOne').mockResolvedValue(null);
 
       await expect(
-        controller.update(request.user as any, '1', { nickname: 'NewNick1234' }),
+        controller.update(request.user as any, '1', {
+          nickname: 'NewNick1234',
+        }),
       ).rejects.toThrow('Player with ID 1 not found');
     });
 
@@ -216,7 +226,9 @@ describe(PlayerController.name, () => {
       jest.spyOn(service, 'updateIfOwner').mockResolvedValue(null);
 
       await expect(
-        controller.update(request.user as any, '1', { nickname: 'NewNick1234' }),
+        controller.update(request.user as any, '1', {
+          nickname: 'NewNick1234',
+        }),
       ).rejects.toThrow('Player with ID 1 not found');
     });
 
@@ -229,7 +241,9 @@ describe(PlayerController.name, () => {
         .mockRejectedValue(new NicknameAlreadyTakenException('TakenNick1234'));
 
       await expect(
-        controller.update(request.user as any, '1', { nickname: 'TakenNick1234' }),
+        controller.update(request.user as any, '1', {
+          nickname: 'TakenNick1234',
+        }),
       ).rejects.toThrow(NicknameAlreadyTakenException);
     });
   });

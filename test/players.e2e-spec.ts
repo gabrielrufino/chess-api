@@ -1,7 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
-import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import { MongooseModule } from '@nestjs/mongoose';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
+import {
+  ExecutionContext,
+  HttpStatus,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MongooseModule, getConnectionToken } from '@nestjs/mongoose';
 import { CacheModule } from '@nestjs/cache-manager';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import faker from '@faker-js/faker';
@@ -12,12 +17,13 @@ import { AuthModule } from '../src/auth/auth.module';
 import { AuthGuard } from '../src/auth/guards/auth.guard';
 import { PlayerModule } from '../src/player/player.module';
 import { AppModule } from '../src/app.module';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 describe('PlayerModule (e2e)', () => {
   let app: INestApplication;
   let client: TestAgent;
   let mongod: MongoMemoryServer;
-  let connection: mongoose.Connection;
+  let connection: import('mongoose').Connection;
 
   beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
@@ -48,7 +54,9 @@ describe('PlayerModule (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
     await app.init();
 
     client = request(app.getHttpServer());

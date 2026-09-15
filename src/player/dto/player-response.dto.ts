@@ -1,15 +1,19 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type, Transform } from 'class-transformer';
 
 @Exclude()
 export class PlayerDto {
   @Expose()
-  @Transform(({ value }) => value?.toString())
+  @Transform(({ value }: { value: { toString?: () => string } | undefined }) =>
+    value?.toString(),
+  )
   @ApiProperty({ description: 'The unique identifier of the player' })
   _id: string;
 
   @Expose()
-  @ApiProperty({ description: 'The user identifier associated with the player' })
+  @ApiProperty({
+    description: 'The user identifier associated with the player',
+  })
   userId: string;
 
   @Expose()

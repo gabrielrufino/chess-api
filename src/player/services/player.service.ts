@@ -31,7 +31,7 @@ export class PlayerService {
 
   public async create(authUser: AuthUser, createPlayerDto: CreatePlayerDto) {
     const reservedUserId = await this.cacheManager.get<string>(
-      this.nicknameReserveKey(createPlayerDto.nickname)
+      this.nicknameReserveKey(createPlayerDto.nickname),
     );
 
     if (reservedUserId && reservedUserId !== authUser.sub) {
@@ -81,7 +81,8 @@ export class PlayerService {
 
     const [total, players] = await Promise.all([
       this.playerModel.countDocuments(filter),
-      this.playerModel.find(filter)
+      this.playerModel
+        .find(filter)
         .skip(query?.skip ?? 0)
         .limit(query?.limit ?? 10)
         .lean(),
@@ -124,7 +125,7 @@ export class PlayerService {
   ): Promise<PlayerDocument | null> {
     if (updatePlayerDto.nickname) {
       const reservedUserId = await this.cacheManager.get<string>(
-        this.nicknameReserveKey(updatePlayerDto.nickname)
+        this.nicknameReserveKey(updatePlayerDto.nickname),
       );
 
       if (reservedUserId && reservedUserId !== userId) {

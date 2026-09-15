@@ -20,7 +20,11 @@ describe(PlayerService.name, () => {
           useValue: {
             create: jest.fn(),
             countDocuments: jest.fn(),
-            find: jest.fn().mockReturnValue({ skip: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), lean: jest.fn() }),
+            find: jest.fn().mockReturnValue({
+              skip: jest.fn().mockReturnThis(),
+              limit: jest.fn().mockReturnThis(),
+              lean: jest.fn(),
+            }),
             findOne: jest.fn(),
             findById: jest.fn(),
             findByIdAndUpdate: jest.fn(),
@@ -61,7 +65,7 @@ describe(PlayerService.name, () => {
       jest.spyOn(repository, 'findOne').mockResolvedValue(null);
       jest.spyOn(repository, 'create').mockResolvedValue(mockPlayer as any);
 
-      const result = await service.create(authUser as any, createDto);
+      await service.create(authUser as any, createDto);
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(repository.findOne).toHaveBeenCalledWith({
@@ -75,15 +79,17 @@ describe(PlayerService.name, () => {
         nickname: createDto.nickname,
       });
 
-      expect(cacheManager.del).toHaveBeenCalledWith('nickname-reserve:SwiftKnight1234');
+      expect(cacheManager.del).toHaveBeenCalledWith(
+        'nickname-reserve:SwiftKnight1234',
+      );
     });
 
-    it('should delete the reservation when no owner is stored (cache miss)', async () => {
+    it('should NOT delete the reservation when no owner is stored (cache miss)', async () => {
       jest.spyOn(cacheManager, 'get').mockResolvedValue(null);
 
       await service.dismissNicknameReservation('some-nickname', 'user-id');
 
-      expect(cacheManager.del).toHaveBeenCalledWith('nickname-reserve:SwiftKnight1234');
+      expect(cacheManager.del).not.toHaveBeenCalled();
     });
 
     it('should NOT delete the reservation when caller is not the owner', async () => {
@@ -91,7 +97,7 @@ describe(PlayerService.name, () => {
 
       await service.dismissNicknameReservation('some-nickname', 'user-id');
 
-      expect(cacheManager.del).toHaveBeenCalledWith('nickname-reserve:SwiftKnight1234');
+      expect(cacheManager.del).not.toHaveBeenCalled();
     });
   });
 
@@ -196,7 +202,7 @@ describe(PlayerService.name, () => {
 
       await service.updateIfOwner('1', 'user-id', { nickname: 'NewNick1234' });
 
-      expect(cacheManager.del).toHaveBeenCalledWith('nickname-reserve:SwiftKnight1234');
+      expect(cacheManager.del).not.toHaveBeenCalled();
     });
 
     it('should not call cacheManager.del when findOneAndUpdate returns a player but nickname is undefined/empty', async () => {
@@ -211,7 +217,7 @@ describe(PlayerService.name, () => {
 
       await service.updateIfOwner('1', 'user-id', {});
 
-      expect(cacheManager.del).toHaveBeenCalledWith('nickname-reserve:SwiftKnight1234');
+      expect(cacheManager.del).not.toHaveBeenCalled();
     });
   });
 });

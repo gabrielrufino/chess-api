@@ -29,7 +29,7 @@ import { CreatePlayerDto } from '../dto/create-player.dto';
 import { UpdatePlayerDto } from '../dto/update-player.dto';
 import { FindAllPlayersDto } from '../dto/find-all-players.dto';
 import { ParseMongoIdPipe } from 'src/common/pipes/parse-mongo-id.pipe';
-import { CurrentUser } from "../../auth/decorators/current-user.decorator";
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import {
@@ -71,10 +71,7 @@ export class PlayerController {
     @CurrentUser() user: AuthUser,
     @Param('nickname') nickname: string,
   ): Promise<void> {
-    await this.playerService.dismissNicknameReservation(
-      nickname,
-      user.sub,
-    );
+    await this.playerService.dismissNicknameReservation(nickname, user.sub);
   }
 
   @ApiOkResponse({
@@ -183,10 +180,7 @@ export class PlayerController {
     }
     // Defensive check: handles the rare race condition where the player
     // was deleted between the findOne ownership check and this operation.
-    const removedPlayer = await this.playerService.removeIfOwner(
-      id,
-      user.sub,
-    );
+    const removedPlayer = await this.playerService.removeIfOwner(id, user.sub);
     if (!removedPlayer) {
       throw new NotFoundException(`Player with ID ${id} not found`);
     }
