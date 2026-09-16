@@ -37,12 +37,12 @@ describe('ThrottlerGuard (e2e)', () => {
   });
 
   it('should return 429 after exceeding limit', async () => {
-    // 5 requests should pass (matching THROTTLE_LIMIT env var)
-    for (let i = 0; i < 5; i++) {
+    // 10 requests should pass (matching @Throttle on GuestUserController)
+    for (let i = 0; i < 10; i++) {
       await request(app.getHttpServer()).post('/guest-users').expect(201);
     }
 
-    // 6th request should be throttled
+    // 11th request should be throttled
     await request(app.getHttpServer()).post('/guest-users').expect(429);
   });
 

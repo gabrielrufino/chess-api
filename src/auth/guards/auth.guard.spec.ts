@@ -24,6 +24,7 @@ describe(AuthGuard.name, () => {
       user: undefined,
     };
     return {
+      getType: jest.fn().mockReturnValue('http'),
       getHandler: jest.fn(),
       getClass: jest.fn(),
       switchToHttp: jest.fn().mockReturnValue({
@@ -70,9 +71,20 @@ describe(AuthGuard.name, () => {
     ]);
   });
 
+  it('should return true if context type is not http', async () => {
+    const context = {
+      getType: jest.fn().mockReturnValue('ws'),
+    } as unknown as ExecutionContext;
+
+    const result = await guard.canActivate(context);
+
+    expect(result).toBe(true);
+  });
+
   it('should throw UnauthorizedException if headers object is missing', async () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(false);
     const context = {
+      getType: jest.fn().mockReturnValue('http'),
       getHandler: jest.fn(),
       getClass: jest.fn(),
       switchToHttp: jest.fn().mockReturnValue({

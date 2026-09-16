@@ -29,7 +29,8 @@ import { CreatePlayerDto } from '../dto/create-player.dto';
 import { UpdatePlayerDto } from '../dto/update-player.dto';
 import { FindAllPlayersDto } from '../dto/find-all-players.dto';
 import { ParseMongoIdPipe } from 'src/common/pipes/parse-mongo-id.pipe';
-import { AuthRequest } from 'src/auth/interfaces/auth-user.interface';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { AuthUser } from 'src/auth/interfaces/auth-user.interface';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import {
   NicknameSuggestionDto,
@@ -54,10 +55,9 @@ export class PlayerController {
   })
   @Post()
   public async create(
-    @Request() request: AuthRequest,
+    @CurrentUser() user: AuthUser,
     @Body() createPlayerDto: CreatePlayerDto,
   ): Promise<PlayerDto> {
-    const user = request.user;
     const player = await this.playerService.create(user, createPlayerDto);
     return plainToInstance(PlayerDto, player.toJSON());
   }
@@ -68,13 +68,10 @@ export class PlayerController {
   @HttpCode(204)
   @Delete('nickname-suggestion/:nickname')
   public async dismissNicknameReservation(
-    @Request() request: AuthRequest,
+    @CurrentUser() user: AuthUser,
     @Param('nickname') nickname: string,
   ): Promise<void> {
-    await this.playerService.dismissNicknameReservation(
-      nickname,
-      request.user.sub,
-    );
+    await this.playerService.dismissNicknameReservation(nickname, user.sub);
   }
 
   @ApiOkResponse({
@@ -94,6 +91,8 @@ export class PlayerController {
     return plainToInstance(PlayerListDto, {
       data: result.data,
       total: result.total,
+      skip: query.skip ?? 0,
+      limit: query.limit ?? 10,
     });
   }
 
@@ -103,9 +102,9 @@ export class PlayerController {
   })
   @Get('nickname-suggestion')
   public async suggestNickname(
-    @Request() request: AuthRequest,
+    @CurrentUser() user: AuthUser,
   ): Promise<NicknameSuggestionDto> {
-    const nickname = await this.playerService.suggestNickname(request.user);
+    const nickname = await this.playerService.suggestNickname(user);
     return plainToInstance(NicknameSuggestionDto, { nickname });
   }
 
@@ -136,7 +135,7 @@ export class PlayerController {
   })
   @Patch(':id')
   public async update(
-    @Request() request: AuthRequest,
+    @CurrentUser() user: AuthUser,
     @Param('id', ParseMongoIdPipe) id: string,
     @Body() updatePlayerDto: UpdatePlayerDto,
   ): Promise<PlayerDto> {
@@ -144,14 +143,14 @@ export class PlayerController {
     if (!player) {
       throw new NotFoundException(`Player with ID ${id} not found`);
     }
-    if (player.userId !== request.user.sub) {
+    if (player.userId !== user.sub) {
       throw new ForbiddenException('You are not allowed to update this player');
     }
     // Defensive check: handles the rare race condition where the player
     // was deleted between the findOne ownership check and this operation.
     const updatedPlayer = await this.playerService.updateIfOwner(
       id,
-      request.user.sub,
+      user.sub,
       updatePlayerDto,
     );
     if (!updatedPlayer) {
@@ -169,22 +168,19 @@ export class PlayerController {
   })
   @Delete(':id')
   public async remove(
-    @Request() request: AuthRequest,
+    @CurrentUser() user: AuthUser,
     @Param('id', ParseMongoIdPipe) id: string,
   ): Promise<PlayerDto> {
     const player = await this.playerService.findOne(id);
     if (!player) {
       throw new NotFoundException(`Player with ID ${id} not found`);
     }
-    if (player.userId !== request.user.sub) {
+    if (player.userId !== user.sub) {
       throw new ForbiddenException('You are not allowed to delete this player');
     }
     // Defensive check: handles the rare race condition where the player
     // was deleted between the findOne ownership check and this operation.
-    const removedPlayer = await this.playerService.removeIfOwner(
-      id,
-      request.user.sub,
-    );
+    const removedPlayer = await this.playerService.removeIfOwner(id, user.sub);
     if (!removedPlayer) {
       throw new NotFoundException(`Player with ID ${id} not found`);
     }

@@ -1,3 +1,4 @@
+import { JwtService } from '@nestjs/jwt';
 /* eslint-disable */
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { Model } from 'mongoose';
 describe(GameGateway.name, () => {
   let gateway: GameGateway;
   let gameModel: Model<GameDocument>;
+  let jwtService: JwtService;
 
   const mockServer = {
     to: jest.fn().mockReturnThis(),
@@ -21,6 +23,9 @@ describe(GameGateway.name, () => {
   const mockClient = {
     join: jest.fn(),
     emit: jest.fn(),
+    handshake: {
+      auth: { token: 'valid-token' },
+    },
   };
 
   beforeEach(async () => {
@@ -35,10 +40,15 @@ describe(GameGateway.name, () => {
           provide: getModelToken(Game.name),
           useValue: gameModel,
         },
+        {
+          provide: JwtService,
+          useValue: { verifyAsync: jest.fn() },
+        },
       ],
     }).compile();
 
     gateway = module.get<GameGateway>(GameGateway);
+    jwtService = module.get<JwtService>(JwtService);
     // inject mock server
     gateway.server = mockServer as unknown as Server;
 
@@ -50,6 +60,31 @@ describe(GameGateway.name, () => {
   });
 
   describe(GameGateway.prototype.handleJoinGame.name, () => {
+    it('should return `{ joined: false, error: "Unauthorized" }` when token is missing', async () => {
+      const clientWithoutToken = {
+        join: jest.fn(),
+        emit: jest.fn(),
+        handshake: { auth: {} },
+      };
+      const result = await gateway.handleJoinGame(
+        '507f1f77bcf86cd799439011',
+        clientWithoutToken as unknown as Socket,
+      );
+      expect(result).toEqual({ joined: false, error: 'Unauthorized' });
+    });
+
+    it('should return `{ joined: false, error: "Unauthorized" }` when token verification rejects', async () => {
+      jest
+        .spyOn(jwtService, 'verifyAsync')
+        .mockRejectedValueOnce(new Error('Invalid token'));
+
+      const result = await gateway.handleJoinGame(
+        '507f1f77bcf86cd799439011',
+        mockClient as unknown as Socket,
+      );
+      expect(result).toEqual({ joined: false, error: 'Unauthorized' });
+    });
+
     it('should return `{ joined: false }` when gameId is empty', async () => {
       const result = await gateway.handleJoinGame(
         '',

@@ -7,6 +7,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import faker from '@faker-js/faker';
 import * as request from 'supertest';
 import { io, Socket } from 'socket.io-client';
+import { JwtService } from '@nestjs/jwt';
 
 import { AuthModule } from '../src/auth/auth.module';
 import { AuthGuard } from '../src/auth/guards/auth.guard';
@@ -390,10 +391,16 @@ describe('GameModule (e2e)', () => {
             .set('x-user-id', player2Id)
             .send({ duration: GameDurationEnum.FiveMinutes });
 
+          const jwtService = app.get(JwtService);
+          const token = jwtService.sign({ sub: player1Id, isGuest: true });
+
           ioClient = io(`http://127.0.0.1:${port}`, {
             transports: ['websocket'],
             forceNew: true,
             reconnection: false,
+            auth: {
+              token,
+            },
           });
 
           let moveMade = false;

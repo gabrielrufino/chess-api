@@ -5,7 +5,7 @@ import {
   ConnectedSocket,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
+import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
 import type { Server, Socket } from 'socket.io';
@@ -13,7 +13,9 @@ import { Chess } from 'chess.js';
 import { plainToInstance } from 'class-transformer';
 import { Game, GameDocument } from '../schemas/game.schema';
 import { GameDto, GameBoardDto } from '../dto/game-response.dto';
+import { JwtService } from '@nestjs/jwt';
 
+@UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway {
   @WebSocketServer()
@@ -24,6 +26,7 @@ export class GameGateway {
   constructor(
     @InjectModel(Game.name)
     private readonly gameModel: Model<GameDocument>,
+    private readonly jwtService: JwtService,
   ) {}
 
   @SubscribeMessage('join-game')
@@ -32,6 +35,21 @@ export class GameGateway {
     @ConnectedSocket() client: Socket,
   ) {
     if (!gameId || !isValidObjectId(gameId)) return { joined: false };
+
+    try {
+      const token =
+        client.handshake.auth?.token ||
+        (client.handshake.headers?.authorization &&
+          client.handshake.headers.authorization.split(' ')[1]);
+
+      if (!token) {
+        return { joined: false, error: 'Unauthorized' };
+      }
+
+      await this.jwtService.verifyAsync(token);
+    } catch {
+      return { joined: false, error: 'Unauthorized' };
+    }
 
     const game = await this.gameModel.findById(gameId).exec();
     if (!game) return { joined: false };

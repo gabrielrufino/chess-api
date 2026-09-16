@@ -1,7 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
-import { HttpStatus, INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import { MongooseModule } from '@nestjs/mongoose';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unused-vars */
+import {
+  ExecutionContext,
+  HttpStatus,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MongooseModule, getConnectionToken } from '@nestjs/mongoose';
 import { CacheModule } from '@nestjs/cache-manager';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import faker from '@faker-js/faker';
@@ -16,13 +21,15 @@ describe('PlayerModule (e2e)', () => {
   let app: INestApplication;
   let client: TestAgent;
   let mongod: MongoMemoryServer;
+  let connection: import('mongoose').Connection;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();
+    process.env.DATABASE_URL = uri;
     process.env.JWT_SECRET = 'test-secret';
 
-    const moduleRef = await Test.createTestingModule({
+    const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         MongooseModule.forRoot(uri),
         CacheModule.register({ isGlobal: true }),
@@ -32,9 +39,8 @@ describe('PlayerModule (e2e)', () => {
     })
       .overrideGuard(AuthGuard)
       .useValue({
-        canActivate: (context: any) => {
+        canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
-
           const userId = req.headers['x-user-id'] || faker.datatype.uuid();
 
           req.user = { sub: userId, isGuest: true };
@@ -43,16 +49,28 @@ describe('PlayerModule (e2e)', () => {
       })
       .compile();
 
-    app = moduleRef.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe());
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
     await app.init();
 
     client = request(app.getHttpServer());
+    connection = moduleFixture.get(getConnectionToken());
   });
 
   afterEach(async () => {
-    jest.restoreAllMocks();
+    if (connection) {
+      const collections = connection.collections;
+      for (const key in collections) {
+        await collections[key].deleteMany({});
+      }
+    }
+  });
+
+  afterAll(async () => {
     if (app) await app.close();
+    if (connection) await connection.close();
     if (mongod) await mongod.stop();
   });
 

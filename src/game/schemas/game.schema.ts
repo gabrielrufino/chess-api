@@ -6,7 +6,11 @@ import { Player } from '../../player/schemas/player.schema';
 
 export type GameDocument = HydratedDocument<Game>;
 
-@Schema({ timestamps: true, collection: 'games' })
+@Schema({
+  timestamps: true,
+  collection: 'games',
+  optimisticConcurrency: true,
+})
 export class Game {
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Player' })
   whitePlayerId?: mongoose.Types.ObjectId;
@@ -44,6 +48,10 @@ export class Game {
 }
 
 export const GameSchema = SchemaFactory.createForClass(Game);
+
+GameSchema.index({ whitePlayerId: 1 });
+GameSchema.index({ blackPlayerId: 1 });
+GameSchema.index({ status: 1, duration: 1, blackPlayerId: 1 });
 
 GameSchema.virtual('whitePlayer', {
   ref: 'Player',
