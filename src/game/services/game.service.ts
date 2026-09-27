@@ -464,11 +464,35 @@ export class GameService {
     await Promise.all([
       this.playerModel.updateOne(
         { _id: game.whitePlayerId },
-        { $inc: { rating: ratingChanges.white.delta } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [
+                  { $ifNull: ['$rating', 1200] },
+                  ratingChanges.white.delta,
+                ],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       ),
       this.playerModel.updateOne(
         { _id: game.blackPlayerId },
-        { $inc: { rating: ratingChanges.black.delta } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [
+                  { $ifNull: ['$rating', 1200] },
+                  ratingChanges.black.delta,
+                ],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       ),
     ]);
   }

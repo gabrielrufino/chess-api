@@ -629,12 +629,30 @@ describe(GameService.name, () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(playerModel.updateOne).toHaveBeenCalledWith(
         { _id: gameMock.whitePlayerId },
-        { $inc: { rating: -16 } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, -16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(playerModel.updateOne).toHaveBeenCalledWith(
         { _id: gameMock.blackPlayerId },
-        { $inc: { rating: 16 } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       );
       expect(mockSave).toHaveBeenCalled();
     });
@@ -1178,12 +1196,30 @@ describe(GameService.name, () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(playerModel.updateOne).toHaveBeenCalledWith(
         { _id: gameMock.whitePlayerId },
-        { $inc: { rating: -16 } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, -16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(playerModel.updateOne).toHaveBeenCalledWith(
         { _id: gameMock.blackPlayerId },
-        { $inc: { rating: 16 } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       );
     });
 
@@ -1264,12 +1300,30 @@ describe(GameService.name, () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(playerModel.updateOne).toHaveBeenCalledWith(
         { _id: gameMock.whitePlayerId },
-        { $inc: { rating: 16 } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(playerModel.updateOne).toHaveBeenCalledWith(
         { _id: gameMock.blackPlayerId },
-        { $inc: { rating: -16 } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, -16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       );
     });
 
@@ -1762,12 +1816,30 @@ describe(GameService.name, () => {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(playerModel.updateOne).toHaveBeenCalledWith(
         { _id: gameMock.whitePlayerId },
-        { $inc: { rating: 0 } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 0],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       );
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(playerModel.updateOne).toHaveBeenCalledWith(
         { _id: gameMock.blackPlayerId },
-        { $inc: { rating: 0 } },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 0],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
       );
     });
 
