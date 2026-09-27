@@ -1237,7 +1237,12 @@ describe(GameService.name, () => {
         lastMoveAt: new Date(Date.now() - 70000),
         whiteTimeRemainingMs: 60000,
         blackTimeRemainingMs: 60000,
+        whitePlayer: { rating: 1200 },
+        blackPlayer: { rating: 1200 },
         save: mockSave,
+        whiteRatingChange: undefined,
+        blackRatingChange: undefined,
+        winnerId: null as any,
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         populate: jest.fn().mockReturnValue({
@@ -1247,9 +1252,63 @@ describe(GameService.name, () => {
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
-      await service.claimTimeout('1', { sub: 'user2' } as AuthUser);
+      const result = await service.claimTimeout('1', {
+        sub: 'user2',
+      } as AuthUser);
       expect(gameMock.blackTimeRemainingMs).toBe(0);
       expect(gameMock.whiteTimeRemainingMs).toBe(60000);
+      expect(result.status).toBe(GameStatusEnum.TIMEOUT);
+      expect(result.winnerId).toBe(gameMock.whitePlayerId);
+      expect(result.whiteRatingChange).toBe(16);
+      expect(result.blackRatingChange).toBe(-16);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: gameMock.whitePlayerId },
+        { $inc: { rating: 16 } },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: gameMock.blackPlayerId },
+        { $inc: { rating: -16 } },
+      );
+    });
+
+    it('should set status to DRAW on black timeout if white has no mating material (only a king)', async () => {
+      const mockSave = jest.fn();
+      // FEN: black has a queen, white only has a king. Black times out. White cannot checkmate, so it is a draw.
+      const fen = 'k7/8/q7/8/8/8/8/K7 b - - 0 1';
+      const gameMock = {
+        status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        fen,
+        lastMoveAt: new Date(Date.now() - 70000),
+        whiteTimeRemainingMs: 60000,
+        blackTimeRemainingMs: 60000,
+        whitePlayer: { rating: 1200 },
+        blackPlayer: { rating: 1200 },
+        save: mockSave,
+        whiteRatingChange: undefined,
+        blackRatingChange: undefined,
+        winnerId: null as any,
+      };
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player2' },
+      } as any);
+      const result = await service.claimTimeout('1', {
+        sub: 'user2',
+      } as AuthUser);
+      expect(result.status).toBe(GameStatusEnum.DRAW);
+      expect(result.winnerId).toBeNull();
+      expect(result.blackTimeRemainingMs).toBe(0);
+      expect(result.whiteTimeRemainingMs).toBe(60000);
+      expect(result.whiteRatingChange).toBe(0);
+      expect(result.blackRatingChange).toBe(0);
     });
 
     // --- Mutant killer: ID 314 ---
