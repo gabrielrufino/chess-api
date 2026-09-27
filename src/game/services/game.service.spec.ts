@@ -31,6 +31,7 @@ describe(GameService.name, () => {
     } as unknown as Model<GameDocument>;
     playerModel = {
       findOne: jest.fn(),
+      updateOne: jest.fn().mockResolvedValue({}),
     } as unknown as Model<PlayerDocument>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -604,6 +605,8 @@ describe(GameService.name, () => {
         status: GameStatusEnum.IN_PROGRESS,
         fen: chess.fen(),
         pgn: chess.pgn(),
+        whitePlayer: { rating: 1200 },
+        blackPlayer: { rating: 1200 },
         save: mockSave,
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
@@ -621,6 +624,18 @@ describe(GameService.name, () => {
       } as unknown as AuthUser);
 
       expect(result.status).toBe(GameStatusEnum.CHECKMATE);
+      expect(result.whiteRatingChange).toBe(-16);
+      expect(result.blackRatingChange).toBe(16);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: gameMock.whitePlayerId },
+        { $inc: { rating: -16 } },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: gameMock.blackPlayerId },
+        { $inc: { rating: 16 } },
+      );
       expect(mockSave).toHaveBeenCalled();
     });
 
@@ -1141,7 +1156,11 @@ describe(GameService.name, () => {
         lastMoveAt: new Date(Date.now() - 70000),
         whiteTimeRemainingMs: 60000,
         blackTimeRemainingMs: 60000,
+        whitePlayer: { rating: 1200 },
+        blackPlayer: { rating: 1200 },
         save: mockSave,
+        whiteRatingChange: undefined,
+        blackRatingChange: undefined,
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
         populate: jest.fn().mockReturnValue({
@@ -1154,6 +1173,55 @@ describe(GameService.name, () => {
       await service.claimTimeout('1', { sub: 'user1' } as AuthUser);
       expect(gameMock.whiteTimeRemainingMs).toBe(0);
       expect(gameMock.blackTimeRemainingMs).toBe(60000);
+      expect(gameMock.whiteRatingChange).toBe(-16);
+      expect(gameMock.blackRatingChange).toBe(16);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: gameMock.whitePlayerId },
+        { $inc: { rating: -16 } },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: gameMock.blackPlayerId },
+        { $inc: { rating: 16 } },
+      );
+    });
+
+    it('should set status to DRAW on white timeout if black has no mating material (only a king)', async () => {
+      const mockSave = jest.fn();
+      // FEN: white has a queen, black only has a king. White times out. Black cannot checkmate, so it is a draw.
+      const fen = 'k7/8/Q7/8/8/8/8/K7 w - - 0 1';
+      const gameMock = {
+        status: GameStatusEnum.IN_PROGRESS,
+        whitePlayerId: { toString: () => 'player1' },
+        blackPlayerId: { toString: () => 'player2' },
+        fen,
+        lastMoveAt: new Date(Date.now() - 70000),
+        whiteTimeRemainingMs: 60000,
+        blackTimeRemainingMs: 60000,
+        whitePlayer: { rating: 1200 },
+        blackPlayer: { rating: 1200 },
+        save: mockSave,
+        whiteRatingChange: undefined,
+        blackRatingChange: undefined,
+      };
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
+      jest.spyOn(playerModel, 'findOne').mockResolvedValue({
+        _id: { toString: () => 'player1' },
+      } as any);
+      const result = await service.claimTimeout('1', {
+        sub: 'user1',
+      } as AuthUser);
+      expect(result.status).toBe(GameStatusEnum.DRAW);
+      expect(result.winnerId).toBeNull();
+      expect(result.whiteTimeRemainingMs).toBe(0);
+      expect(result.blackTimeRemainingMs).toBe(60000);
+      expect(result.whiteRatingChange).toBe(0);
+      expect(result.blackRatingChange).toBe(0);
     });
 
     it('should zero blackTimeRemainingMs and NOT whiteTimeRemainingMs on black timeout', async () => {
@@ -1614,6 +1682,8 @@ describe(GameService.name, () => {
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
         fen: preStalemateFen,
+        whitePlayer: { rating: 1200 },
+        blackPlayer: { rating: 1200 },
         save: mockSave,
       };
       jest.spyOn(gameModel, 'findById').mockReturnValue({
@@ -1628,6 +1698,18 @@ describe(GameService.name, () => {
         sub: 'user1',
       } as unknown as AuthUser);
       expect(result.status).toBe(GameStatusEnum.DRAW);
+      expect(result.whiteRatingChange).toBe(0);
+      expect(result.blackRatingChange).toBe(0);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: gameMock.whitePlayerId },
+        { $inc: { rating: 0 } },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: gameMock.blackPlayerId },
+        { $inc: { rating: 0 } },
+      );
     });
 
     it('should NOT change status when move does not end the game', async () => {

@@ -175,7 +175,7 @@ export class GameService {
     this.validatePlayerTurn(game, rawPlayer, isWhiteTurn);
 
     const now = new Date();
-    await this.handleTimeControl(game, isWhiteTurn, now);
+    await this.handleTimeControl(game, isWhiteTurn, now, chess);
 
     this.updateGameState(game, chess, createMoveDto.move, now);
 
@@ -219,10 +219,33 @@ export class GameService {
     }
   }
 
+  private canPossibilyCheckmate(chess: Chess, color: 'w' | 'b'): boolean {
+    if (chess.isInsufficientMaterial()) {
+      return false;
+    }
+    const board = chess.board();
+    let hasNonKingPiece = false;
+    for (const row of board) {
+      for (const piece of row) {
+        if (piece && piece.color === color) {
+          if (piece.type !== 'k') {
+            hasNonKingPiece = true;
+            break;
+          }
+        }
+      }
+      if (hasNonKingPiece) {
+        break;
+      }
+    }
+    return hasNonKingPiece;
+  }
+
   private async handleTimeControl(
     game: GameDocument,
     isWhiteTurn: boolean,
     now: Date,
+    chess: Chess,
   ): Promise<void> {
     if (
       !game.lastMoveAt ||
@@ -237,9 +260,15 @@ export class GameService {
     if (isWhiteTurn) {
       game.whiteTimeRemainingMs = remaining;
       if (remaining <= 0) {
-        game.status = GameStatusEnum.TIMEOUT;
-        game.winnerId = game.blackPlayerId;
         game.whiteTimeRemainingMs = 0;
+        const canCheckmate = this.canPossibilyCheckmate(chess, 'b');
+        if (canCheckmate) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.winnerId = game.blackPlayerId;
+        } else {
+          game.status = GameStatusEnum.DRAW;
+          game.winnerId = null;
+        }
         await this.processGameEnd(game);
         await game.save();
         this.broadcastGameUpdate(game);
@@ -249,9 +278,15 @@ export class GameService {
     } else {
       game.blackTimeRemainingMs = remaining;
       if (remaining <= 0) {
-        game.status = GameStatusEnum.TIMEOUT;
-        game.winnerId = game.whitePlayerId;
         game.blackTimeRemainingMs = 0;
+        const canCheckmate = this.canPossibilyCheckmate(chess, 'w');
+        if (canCheckmate) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.winnerId = game.whitePlayerId;
+        } else {
+          game.status = GameStatusEnum.DRAW;
+          game.winnerId = null;
+        }
         await this.processGameEnd(game);
         await game.save();
         this.broadcastGameUpdate(game);
@@ -342,13 +377,26 @@ export class GameService {
     const remaining = this.computeTimeRemaining(game, isWhiteTurn, now);
 
     if (remaining <= 0) {
-      game.status = GameStatusEnum.TIMEOUT;
       if (isWhiteTurn) {
         game.whiteTimeRemainingMs = 0;
-        game.winnerId = game.blackPlayerId;
+        const canCheckmate = this.canPossibilyCheckmate(chess, 'b');
+        if (canCheckmate) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.winnerId = game.blackPlayerId;
+        } else {
+          game.status = GameStatusEnum.DRAW;
+          game.winnerId = null;
+        }
       } else {
         game.blackTimeRemainingMs = 0;
-        game.winnerId = game.whitePlayerId;
+        const canCheckmate = this.canPossibilyCheckmate(chess, 'w');
+        if (canCheckmate) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.winnerId = game.whitePlayerId;
+        } else {
+          game.status = GameStatusEnum.DRAW;
+          game.winnerId = null;
+        }
       }
       await this.processGameEnd(game);
       await game.save();
@@ -383,6 +431,13 @@ export class GameService {
       return;
     }
 
+    if (
+      game.whiteRatingChange !== undefined ||
+      game.blackRatingChange !== undefined
+    ) {
+      return;
+    }
+
     const whiteRating = game.whitePlayer.rating || 1200;
     const blackRating = game.blackPlayer.rating || 1200;
 
@@ -404,14 +459,16 @@ export class GameService {
     game.whiteRatingChange = ratingChanges.white.delta;
     game.blackRatingChange = ratingChanges.black.delta;
 
+    await game.save();
+
     await Promise.all([
       this.playerModel.updateOne(
         { _id: game.whitePlayerId },
-        { $set: { rating: ratingChanges.white.newRating } },
+        { $inc: { rating: ratingChanges.white.delta } },
       ),
       this.playerModel.updateOne(
         { _id: game.blackPlayerId },
-        { $set: { rating: ratingChanges.black.newRating } },
+        { $inc: { rating: ratingChanges.black.delta } },
       ),
     ]);
   }
