@@ -531,13 +531,13 @@ export class GameService {
       .sort({ createdAt: -1 })
       .lean<PopulatedGame[]>();
 
-    const csvLines: string[] = ['Data,Adversario,Cor,Resultado,PGN'];
+    const csvLines: string[] = ['Date,Opponent,Color,Result,PGN'];
 
     for (const game of games) {
       const isWhite = game.whitePlayerId?.toString() === player._id.toString();
       const rawOpponent = isWhite
-        ? (game.blackPlayer?.nickname ?? 'Desconhecido')
-        : (game.whitePlayer?.nickname ?? 'Desconhecido');
+        ? (game.blackPlayer?.nickname ?? 'Unknown')
+        : (game.whitePlayer?.nickname ?? 'Unknown');
       const opponent = this.escapeCsvCell(rawOpponent);
       const color = isWhite ? 'White' : 'Black';
       const result = game.status;
