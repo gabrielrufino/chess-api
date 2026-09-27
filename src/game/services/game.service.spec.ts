@@ -111,7 +111,7 @@ describe(GameService.name, () => {
         _id: { toString: () => 'game1' },
         pgn: '',
         fen: new Chess().fen(),
-        toJSON: () => ({}) as any,
+        toJSON: () => ({}),
       };
 
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
@@ -187,7 +187,7 @@ describe(GameService.name, () => {
         _id: { toString: () => 'game1' },
         pgn: '',
         fen: new Chess().fen(),
-        toJSON: () => ({}) as any,
+        toJSON: () => ({}),
       };
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
       jest
@@ -755,7 +755,7 @@ describe(GameService.name, () => {
     beforeEach(() => {
       const gameMock = {
         _id: { toString: () => 'game-1' },
-        toJSON: () => ({}) as any,
+        toJSON: () => ({}),
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
@@ -1191,7 +1191,7 @@ describe(GameService.name, () => {
         populate: jest.fn().mockReturnValue({
           populate: jest.fn().mockResolvedValue({
             _id: { toString: () => 'game1' },
-            toJSON: () => ({}) as any,
+            toJSON: () => ({}),
             status: GameStatusEnum.IN_PROGRESS,
             whitePlayerId: { toString: () => 'player1' },
             blackPlayerId: { toString: () => 'player2' },
@@ -1489,7 +1489,7 @@ describe(GameService.name, () => {
         populate: jest.fn().mockReturnValue({
           populate: jest.fn().mockResolvedValue({
             _id: { toString: () => 'game1' },
-            toJSON: () => ({}) as any,
+            toJSON: () => ({}),
             whitePlayerId: { toString: () => 'player1' },
             blackPlayerId: { toString: () => 'player2' },
             status: GameStatusEnum.IN_PROGRESS,
@@ -1520,7 +1520,7 @@ describe(GameService.name, () => {
         populate: jest.fn().mockReturnValue({
           populate: jest.fn().mockResolvedValue({
             _id: { toString: () => 'game1' },
-            toJSON: () => ({}) as any,
+            toJSON: () => ({}),
             whitePlayerId: { toString: () => 'player1' },
             blackPlayerId: { toString: () => 'player2' },
             status: GameStatusEnum.IN_PROGRESS,
@@ -1551,7 +1551,7 @@ describe(GameService.name, () => {
         populate: jest.fn().mockReturnValue({
           populate: jest.fn().mockResolvedValue({
             _id: { toString: () => 'game1' },
-            toJSON: () => ({}) as any,
+            toJSON: () => ({}),
             whitePlayerId: { toString: () => 'player1' },
             blackPlayerId: { toString: () => 'player2' },
             status: GameStatusEnum.IN_PROGRESS,
@@ -1580,7 +1580,7 @@ describe(GameService.name, () => {
         populate: jest.fn().mockReturnValue({
           populate: jest.fn().mockResolvedValue({
             _id: { toString: () => 'game1' },
-            toJSON: () => ({}) as any,
+            toJSON: () => ({}),
             whitePlayerId: { toString: () => 'player1' },
             blackPlayerId: { toString: () => 'player2' },
             status: GameStatusEnum.IN_PROGRESS,
@@ -1609,7 +1609,7 @@ describe(GameService.name, () => {
       const mockSave = jest.fn();
       const gameMock = {
         _id: { toString: () => 'game1' },
-        toJSON: () => ({}) as any,
+        toJSON: () => ({}),
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
@@ -1634,7 +1634,7 @@ describe(GameService.name, () => {
       const mockSave = jest.fn();
       const gameMock = {
         _id: { toString: () => 'game1' },
-        toJSON: () => ({}) as any,
+        toJSON: () => ({}),
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
@@ -1904,7 +1904,7 @@ describe(GameService.name, () => {
         populate: jest.fn().mockReturnValue({
           populate: jest.fn().mockResolvedValue({
             _id: { toString: () => 'game1' },
-            toJSON: () => ({}) as any,
+            toJSON: () => ({}),
             whitePlayerId: { toString: () => 'player1' },
             blackPlayerId: { toString: () => 'player2' },
             status: GameStatusEnum.IN_PROGRESS,

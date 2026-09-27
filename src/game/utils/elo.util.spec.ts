@@ -1,12 +1,16 @@
-
-import { getExpectedScore, calculateNewRating, calculateRatingChanges, GameResult } from './elo.util';
+import {
+  getExpectedScore,
+  calculateNewRating,
+  calculateRatingChanges,
+  GameResult,
+} from './elo.util';
 
 describe('Elo Util', () => {
   describe('getExpectedScore', () => {
     it('should return 0.5 when ratings are equal', () => {
       expect(getExpectedScore(1200, 1200)).toBe(0.5);
     });
-    
+
     it('should return higher probability for higher rating', () => {
       expect(getExpectedScore(1400, 1200)).toBeGreaterThan(0.5);
       expect(getExpectedScore(1200, 1400)).toBeLessThan(0.5);
