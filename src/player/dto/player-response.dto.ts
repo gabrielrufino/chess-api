@@ -21,6 +21,10 @@ export class PlayerDto {
   isGuest: boolean;
 
   @Expose()
+  @ApiProperty({ description: 'The Elo rating of the player' })
+  rating: number;
+
+  @Expose()
   @ApiProperty({ description: 'The unique nickname of the player' })
   nickname: string;
 

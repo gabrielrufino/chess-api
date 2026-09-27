@@ -111,7 +111,7 @@ describe(GameService.name, () => {
         _id: { toString: () => 'game1' },
         pgn: '',
         fen: new Chess().fen(),
-        toJSON: () => ({ _id: 'game1' }),
+        toJSON: () => ({}) as any,
       };
 
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
@@ -187,7 +187,7 @@ describe(GameService.name, () => {
         _id: { toString: () => 'game1' },
         pgn: '',
         fen: new Chess().fen(),
-        toJSON: () => ({ _id: 'game1' }),
+        toJSON: () => ({}) as any,
       };
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(mockPlayer as any);
       jest
@@ -370,7 +370,11 @@ describe(GameService.name, () => {
 
   describe(GameService.prototype.makeMove.name, () => {
     it('should throw NotFoundException if game not found', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest
+          .fn()
+          .mockReturnValue({ populate: jest.fn().mockResolvedValue(null) }),
+      } as any);
       await expect(
         service.makeMove('1', { move: 'e4' }, {
           sub: 'user1',
@@ -379,9 +383,11 @@ describe(GameService.name, () => {
     });
 
     it('should throw BadRequestException if game is not full', async () => {
-      jest
-        .spyOn(gameModel, 'findById')
-        .mockResolvedValue({ whitePlayerId: 'player1' });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({ whitePlayerId: 'player1' }),
+        }),
+      } as any);
       await expect(
         service.makeMove('1', { move: 'e4' }, {
           sub: 'user1',
@@ -390,11 +396,15 @@ describe(GameService.name, () => {
     });
 
     it('should throw BadRequestException if game is not in progress', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-        status: GameStatusEnum.WAITING_PLAYER,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+            status: GameStatusEnum.WAITING_PLAYER,
+          }),
+        }),
+      } as any);
       await expect(
         service.makeMove('1', { move: 'e4' }, {
           sub: 'user1',
@@ -403,11 +413,15 @@ describe(GameService.name, () => {
     });
 
     it('should throw NotFoundException if player not found', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-        status: GameStatusEnum.IN_PROGRESS,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+            status: GameStatusEnum.IN_PROGRESS,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
       await expect(
         service.makeMove('1', { move: 'e4' }, {
@@ -417,12 +431,16 @@ describe(GameService.name, () => {
     });
 
     it('should throw ForbiddenException if it is not player turn', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-        status: GameStatusEnum.IN_PROGRESS,
-        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+            status: GameStatusEnum.IN_PROGRESS,
+            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -434,12 +452,16 @@ describe(GameService.name, () => {
     });
 
     it('should throw BadRequestException on invalid move', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-        status: GameStatusEnum.IN_PROGRESS,
-        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+            status: GameStatusEnum.IN_PROGRESS,
+            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -459,7 +481,11 @@ describe(GameService.name, () => {
         fen: new Chess().fen(),
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -480,7 +506,11 @@ describe(GameService.name, () => {
         // lastMoveAt, whiteTimeRemainingMs, blackTimeRemainingMs intentionally absent
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -507,7 +537,11 @@ describe(GameService.name, () => {
         incrementMs: 0,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -538,7 +572,11 @@ describe(GameService.name, () => {
         incrementMs: 0,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -568,7 +606,11 @@ describe(GameService.name, () => {
         pgn: chess.pgn(),
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       // Black plays Qh4#
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
@@ -596,7 +638,11 @@ describe(GameService.name, () => {
         incrementMs: 2000,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -626,7 +672,11 @@ describe(GameService.name, () => {
         incrementMs: 2000,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -640,9 +690,11 @@ describe(GameService.name, () => {
     });
 
     it('should reject with exact Game is not full yet error message', async () => {
-      jest
-        .spyOn(gameModel, 'findById')
-        .mockResolvedValue({ whitePlayerId: 'player1' });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({ whitePlayerId: 'player1' }),
+        }),
+      } as any);
       await expect(
         service.makeMove('1', { move: 'e4' }, {
           sub: 'user1',
@@ -651,11 +703,15 @@ describe(GameService.name, () => {
     });
 
     it('should reject with exact Game is not in progress error message', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-        status: GameStatusEnum.WAITING_PLAYER,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+            status: GameStatusEnum.WAITING_PLAYER,
+          }),
+        }),
+      } as any);
       await expect(
         service.makeMove('1', { move: 'e4' }, {
           sub: 'user1',
@@ -664,7 +720,11 @@ describe(GameService.name, () => {
     });
 
     it('should reject with exact Game not found error message', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest
+          .fn()
+          .mockReturnValue({ populate: jest.fn().mockResolvedValue(null) }),
+      } as any);
       await expect(
         service.makeMove('1', { move: 'e4' }, {
           sub: 'user1',
@@ -673,11 +733,15 @@ describe(GameService.name, () => {
     });
 
     it('should reject with exact Player not found error message', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-        status: GameStatusEnum.IN_PROGRESS,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+            status: GameStatusEnum.IN_PROGRESS,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
       await expect(
         service.makeMove('1', { move: 'e4' }, {
@@ -691,7 +755,7 @@ describe(GameService.name, () => {
     beforeEach(() => {
       const gameMock = {
         _id: { toString: () => 'game-1' },
-        toJSON: () => ({ id: 'game-1' }),
+        toJSON: () => ({}) as any,
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
@@ -700,7 +764,11 @@ describe(GameService.name, () => {
         save: jest.fn(),
       };
 
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -746,37 +814,53 @@ describe(GameService.name, () => {
     const mockAuthUser = { sub: 'user1' } as AuthUser;
 
     it('should throw NotFoundException if game not found', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest
+          .fn()
+          .mockReturnValue({ populate: jest.fn().mockResolvedValue(null) }),
+      } as any);
       await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
         NotFoundException,
       );
     });
 
     it('should throw BadRequestException if game is not in progress', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.WAITING_PLAYER,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.WAITING_PLAYER,
+          }),
+        }),
+      } as any);
       await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('should throw BadRequestException if game is not full', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: 'player1',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: 'player1',
+          }),
+        }),
+      } as any);
       await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('should throw NotFoundException if player not found', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
       await expect(service.claimTimeout('1', mockAuthUser)).rejects.toThrow(
         NotFoundException,
@@ -784,11 +868,15 @@ describe(GameService.name, () => {
     });
 
     it('should throw ForbiddenException if user is not in the game', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player3' },
       } as any);
@@ -798,13 +886,17 @@ describe(GameService.name, () => {
     });
 
     it('should throw BadRequestException when game has no time control', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        fen: new Chess().fen(),
-        // lastMoveAt and timeRemainingMs not set
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            fen: new Chess().fen(),
+            // lastMoveAt and timeRemainingMs not set
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -824,7 +916,11 @@ describe(GameService.name, () => {
         whiteTimeRemainingMs: 60000, // 60 seconds left
         blackTimeRemainingMs: 60000,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -846,7 +942,11 @@ describe(GameService.name, () => {
         blackTimeRemainingMs: 60000,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -872,7 +972,11 @@ describe(GameService.name, () => {
         blackTimeRemainingMs: 60000,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -886,11 +990,15 @@ describe(GameService.name, () => {
 
     // --- Mutant killers: IDs 287, 256, 262, 270, 277, 304, 316 (exact error messages) ---
     it('should throw "You are not a player in this game" with exact message', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player3' },
       } as any);
@@ -900,37 +1008,53 @@ describe(GameService.name, () => {
     });
 
     it('should throw "Game not found" with exact message in claimTimeout', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(null);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest
+          .fn()
+          .mockReturnValue({ populate: jest.fn().mockResolvedValue(null) }),
+      } as any);
       await expect(
         service.claimTimeout('1', { sub: 'user1' } as AuthUser),
       ).rejects.toThrow('Game not found');
     });
 
     it('should throw "Game is not in progress" with exact message in claimTimeout', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.WAITING_PLAYER,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.WAITING_PLAYER,
+          }),
+        }),
+      } as any);
       await expect(
         service.claimTimeout('1', { sub: 'user1' } as AuthUser),
       ).rejects.toThrow('Game is not in progress');
     });
 
     it('should throw "Game is not full yet" with exact message in claimTimeout', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: 'player1',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: 'player1',
+          }),
+        }),
+      } as any);
       await expect(
         service.claimTimeout('1', { sub: 'user1' } as AuthUser),
       ).rejects.toThrow('Game is not full yet');
     });
 
     it('should throw "Player not found" with exact message in claimTimeout', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue(null);
       await expect(
         service.claimTimeout('1', { sub: 'user1' } as AuthUser),
@@ -938,12 +1062,16 @@ describe(GameService.name, () => {
     });
 
     it('should throw "This game does not have a time control" with exact message', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        fen: new Chess().fen(),
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            fen: new Chess().fen(),
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -953,15 +1081,19 @@ describe(GameService.name, () => {
     });
 
     it('should throw "Time is not up yet" with exact message', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        fen: new Chess().fen(),
-        lastMoveAt: new Date(Date.now() - 5000),
-        whiteTimeRemainingMs: 60000,
-        blackTimeRemainingMs: 60000,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            fen: new Chess().fen(),
+            lastMoveAt: new Date(Date.now() - 5000),
+            whiteTimeRemainingMs: 60000,
+            blackTimeRemainingMs: 60000,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -974,16 +1106,20 @@ describe(GameService.name, () => {
     it('should set TIMEOUT when remaining is exactly 0 for white in claimTimeout', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2024-01-01T12:00:00Z'));
       const mockSave = jest.fn();
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        fen: new Chess().fen(),
-        lastMoveAt: new Date('2024-01-01T11:59:00Z'), // exactly 60 seconds ago
-        whiteTimeRemainingMs: 60000,
-        blackTimeRemainingMs: 60000,
-        save: mockSave,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            fen: new Chess().fen(),
+            lastMoveAt: new Date('2024-01-01T11:59:00Z'), // exactly 60 seconds ago
+            whiteTimeRemainingMs: 60000,
+            blackTimeRemainingMs: 60000,
+            save: mockSave,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1007,7 +1143,11 @@ describe(GameService.name, () => {
         blackTimeRemainingMs: 60000,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1031,7 +1171,11 @@ describe(GameService.name, () => {
         blackTimeRemainingMs: 60000,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -1043,18 +1187,22 @@ describe(GameService.name, () => {
     // --- Mutant killer: ID 314 ---
     it('should call broadcastGameUpdate when timeout is claimed successfully', async () => {
       const mockSave = jest.fn();
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        _id: { toString: () => 'game1' },
-        toJSON: () => ({}),
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        fen: new Chess().fen(),
-        lastMoveAt: new Date(Date.now() - 70000),
-        whiteTimeRemainingMs: 60000,
-        blackTimeRemainingMs: 60000,
-        save: mockSave,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            _id: { toString: () => 'game1' },
+            toJSON: () => ({}) as any,
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            fen: new Chess().fen(),
+            lastMoveAt: new Date(Date.now() - 70000),
+            whiteTimeRemainingMs: 60000,
+            blackTimeRemainingMs: 60000,
+            save: mockSave,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1065,14 +1213,18 @@ describe(GameService.name, () => {
 
     // --- Mutant killers: IDs 294–300 (guard clause isolation in claimTimeout) ---
     it('should throw BadRequestException when only lastMoveAt is missing in claimTimeout', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        fen: new Chess().fen(),
-        whiteTimeRemainingMs: 60000,
-        blackTimeRemainingMs: 60000,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            fen: new Chess().fen(),
+            whiteTimeRemainingMs: 60000,
+            blackTimeRemainingMs: 60000,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1082,14 +1234,18 @@ describe(GameService.name, () => {
     });
 
     it('should throw BadRequestException when only whiteTimeRemainingMs is missing in claimTimeout', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        fen: new Chess().fen(),
-        lastMoveAt: new Date(),
-        blackTimeRemainingMs: 60000,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            fen: new Chess().fen(),
+            lastMoveAt: new Date(),
+            blackTimeRemainingMs: 60000,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1099,14 +1255,18 @@ describe(GameService.name, () => {
     });
 
     it('should throw BadRequestException when only blackTimeRemainingMs is missing in claimTimeout', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        fen: new Chess().fen(),
-        lastMoveAt: new Date(),
-        whiteTimeRemainingMs: 60000,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            fen: new Chess().fen(),
+            lastMoveAt: new Date(),
+            whiteTimeRemainingMs: 60000,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1128,7 +1288,11 @@ describe(GameService.name, () => {
         blackTimeRemainingMs: 60000,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1152,7 +1316,11 @@ describe(GameService.name, () => {
         blackTimeRemainingMs: 60000,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -1179,7 +1347,11 @@ describe(GameService.name, () => {
         incrementMs: 0,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1202,7 +1374,11 @@ describe(GameService.name, () => {
         incrementMs: 0,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1227,7 +1403,11 @@ describe(GameService.name, () => {
         incrementMs: 0,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -1253,7 +1433,11 @@ describe(GameService.name, () => {
         incrementMs: 0,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1282,7 +1466,11 @@ describe(GameService.name, () => {
         incrementMs: 0,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -1297,19 +1485,23 @@ describe(GameService.name, () => {
     // --- Mutant killers: IDs 223, 233 (broadcastGameUpdate called on timeout) ---
     it('should call broadcastGameUpdate when white times out in makeMove', async () => {
       const mockSave = jest.fn();
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        _id: { toString: () => 'game1' },
-        toJSON: () => ({}),
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        status: GameStatusEnum.IN_PROGRESS,
-        fen: new Chess().fen(),
-        lastMoveAt: new Date(Date.now() - 70000),
-        whiteTimeRemainingMs: 60000,
-        blackTimeRemainingMs: 60000,
-        incrementMs: 0,
-        save: mockSave,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            _id: { toString: () => 'game1' },
+            toJSON: () => ({}) as any,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            status: GameStatusEnum.IN_PROGRESS,
+            fen: new Chess().fen(),
+            lastMoveAt: new Date(Date.now() - 70000),
+            whiteTimeRemainingMs: 60000,
+            blackTimeRemainingMs: 60000,
+            incrementMs: 0,
+            save: mockSave,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1324,20 +1516,24 @@ describe(GameService.name, () => {
       const mockSave = jest.fn();
       const chess = new Chess();
       chess.move('e4');
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        _id: { toString: () => 'game1' },
-        toJSON: () => ({}),
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        status: GameStatusEnum.IN_PROGRESS,
-        pgn: chess.pgn(),
-        fen: chess.fen(),
-        lastMoveAt: new Date(Date.now() - 70000),
-        whiteTimeRemainingMs: 60000,
-        blackTimeRemainingMs: 60000,
-        incrementMs: 0,
-        save: mockSave,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            _id: { toString: () => 'game1' },
+            toJSON: () => ({}) as any,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            status: GameStatusEnum.IN_PROGRESS,
+            pgn: chess.pgn(),
+            fen: chess.fen(),
+            lastMoveAt: new Date(Date.now() - 70000),
+            whiteTimeRemainingMs: 60000,
+            blackTimeRemainingMs: 60000,
+            incrementMs: 0,
+            save: mockSave,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -1351,19 +1547,23 @@ describe(GameService.name, () => {
     // --- Mutant killers: IDs 225, 235 (exact timeout messages) ---
     it('should throw "Time is up for White" with exact message', async () => {
       const mockSave = jest.fn();
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        _id: { toString: () => 'game1' },
-        toJSON: () => ({ _id: 'game1' }),
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        status: GameStatusEnum.IN_PROGRESS,
-        fen: new Chess().fen(),
-        lastMoveAt: new Date(Date.now() - 70000),
-        whiteTimeRemainingMs: 60000,
-        blackTimeRemainingMs: 60000,
-        incrementMs: 0,
-        save: mockSave,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            _id: { toString: () => 'game1' },
+            toJSON: () => ({}) as any,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            status: GameStatusEnum.IN_PROGRESS,
+            fen: new Chess().fen(),
+            lastMoveAt: new Date(Date.now() - 70000),
+            whiteTimeRemainingMs: 60000,
+            blackTimeRemainingMs: 60000,
+            incrementMs: 0,
+            save: mockSave,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1376,20 +1576,24 @@ describe(GameService.name, () => {
       const mockSave = jest.fn();
       const chess = new Chess();
       chess.move('e4');
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        _id: { toString: () => 'game1' },
-        toJSON: () => ({ _id: 'game1' }),
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        status: GameStatusEnum.IN_PROGRESS,
-        pgn: chess.pgn(),
-        fen: chess.fen(),
-        lastMoveAt: new Date(Date.now() - 70000),
-        whiteTimeRemainingMs: 60000,
-        blackTimeRemainingMs: 60000,
-        incrementMs: 0,
-        save: mockSave,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            _id: { toString: () => 'game1' },
+            toJSON: () => ({}) as any,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            status: GameStatusEnum.IN_PROGRESS,
+            pgn: chess.pgn(),
+            fen: chess.fen(),
+            lastMoveAt: new Date(Date.now() - 70000),
+            whiteTimeRemainingMs: 60000,
+            blackTimeRemainingMs: 60000,
+            incrementMs: 0,
+            save: mockSave,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -1405,14 +1609,18 @@ describe(GameService.name, () => {
       const mockSave = jest.fn();
       const gameMock = {
         _id: { toString: () => 'game1' },
-        toJSON: () => ({ _id: 'game1' }),
+        toJSON: () => ({}) as any,
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
         fen: preStalemateFen,
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1426,14 +1634,18 @@ describe(GameService.name, () => {
       const mockSave = jest.fn();
       const gameMock = {
         _id: { toString: () => 'game1' },
-        toJSON: () => ({ _id: 'game1' }),
+        toJSON: () => ({}) as any,
         whitePlayerId: { toString: () => 'player1' },
         blackPlayerId: { toString: () => 'player2' },
         status: GameStatusEnum.IN_PROGRESS,
         fen: new Chess().fen(),
         save: mockSave,
       };
-      jest.spyOn(gameModel, 'findById').mockResolvedValue(gameMock);
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue(gameMock),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1445,12 +1657,16 @@ describe(GameService.name, () => {
 
     // --- Mutant killer: ID 242 ---
     it('should throw "Invalid move" with exact message', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        status: GameStatusEnum.IN_PROGRESS,
-        fen: new Chess().fen(),
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            status: GameStatusEnum.IN_PROGRESS,
+            fen: new Chess().fen(),
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);
@@ -1461,12 +1677,16 @@ describe(GameService.name, () => {
 
     // --- Mutant killer: ID 202 ---
     it('should throw "Not your turn or you are not in this game" with exact message', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-        status: GameStatusEnum.IN_PROGRESS,
-        fen: new Chess().fen(),
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+            status: GameStatusEnum.IN_PROGRESS,
+            fen: new Chess().fen(),
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player2' },
       } as any);
@@ -1477,12 +1697,16 @@ describe(GameService.name, () => {
 
     // --- Mutant killer: ID 161 ---
     it('should query playerModel with { userId: authUser.sub } in makeMove', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-        status: GameStatusEnum.IN_PROGRESS,
-        fen: new Chess().fen(),
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+            status: GameStatusEnum.IN_PROGRESS,
+            fen: new Chess().fen(),
+          }),
+        }),
+      } as any);
       const findOneSpy = jest
         .spyOn(playerModel, 'findOne')
         .mockResolvedValue(null);
@@ -1534,11 +1758,15 @@ describe(GameService.name, () => {
   describe('claimTimeout — playerModel query filter', () => {
     // --- Mutant killer: ID 271 ---
     it('should query playerModel with { userId: authUser.sub } in claimTimeout', async () => {
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        status: GameStatusEnum.IN_PROGRESS,
-        whitePlayerId: 'player1',
-        blackPlayerId: 'player2',
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            status: GameStatusEnum.IN_PROGRESS,
+            whitePlayerId: 'player1',
+            blackPlayerId: 'player2',
+          }),
+        }),
+      } as any);
       const findOneSpy = jest
         .spyOn(playerModel, 'findOne')
         .mockResolvedValue(null);
@@ -1672,15 +1900,19 @@ describe(GameService.name, () => {
     // --- Mutant killer: ID 322 ---
     it('should emit boardData with fen and board properties', async () => {
       const mockSave = jest.fn();
-      jest.spyOn(gameModel, 'findById').mockResolvedValue({
-        _id: { toString: () => 'game1' },
-        toJSON: () => ({ id: 'game1' }),
-        whitePlayerId: { toString: () => 'player1' },
-        blackPlayerId: { toString: () => 'player2' },
-        status: GameStatusEnum.IN_PROGRESS,
-        fen: new Chess().fen(),
-        save: mockSave,
-      });
+      jest.spyOn(gameModel, 'findById').mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockResolvedValue({
+            _id: { toString: () => 'game1' },
+            toJSON: () => ({}) as any,
+            whitePlayerId: { toString: () => 'player1' },
+            blackPlayerId: { toString: () => 'player2' },
+            status: GameStatusEnum.IN_PROGRESS,
+            fen: new Chess().fen(),
+            save: mockSave,
+          }),
+        }),
+      } as any);
       jest.spyOn(playerModel, 'findOne').mockResolvedValue({
         _id: { toString: () => 'player1' },
       } as any);

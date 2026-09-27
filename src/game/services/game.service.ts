@@ -16,6 +16,7 @@ import { GameStatusEnum } from '../enumerables/game-status.enum';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { Chess } from 'chess.js';
 import { parseGameDuration } from '../utils/time-control.util';
+import { calculateRatingChanges, GameResult } from '../utils/elo.util';
 import { GameGateway } from '../gateways/game.gateway';
 import { plainToInstance } from 'class-transformer';
 import { GameDto } from '../dto/game-response.dto';
@@ -155,7 +156,10 @@ export class GameService {
     createMoveDto: CreateMoveDto,
     authUser: AuthUser,
   ) {
-    const rawGame = await this.gameModel.findById(id);
+    const rawGame = await this.gameModel
+      .findById(id)
+      .populate('whitePlayer')
+      .populate('blackPlayer');
     const game = this.validateGameForMove(rawGame);
 
     const rawPlayer = await this.playerModel.findOne({
@@ -174,6 +178,10 @@ export class GameService {
     await this.handleTimeControl(game, isWhiteTurn, now);
 
     this.updateGameState(game, chess, createMoveDto.move, now);
+
+    if (game.status !== GameStatusEnum.IN_PROGRESS) {
+      await this.processGameEnd(game);
+    }
 
     await game.save();
     this.broadcastGameUpdate(game);
@@ -230,7 +238,9 @@ export class GameService {
       game.whiteTimeRemainingMs = remaining;
       if (remaining <= 0) {
         game.status = GameStatusEnum.TIMEOUT;
+        game.winnerId = game.blackPlayerId;
         game.whiteTimeRemainingMs = 0;
+        await this.processGameEnd(game);
         await game.save();
         this.broadcastGameUpdate(game);
         throw new BadRequestException('Time is up for White');
@@ -240,7 +250,9 @@ export class GameService {
       game.blackTimeRemainingMs = remaining;
       if (remaining <= 0) {
         game.status = GameStatusEnum.TIMEOUT;
+        game.winnerId = game.whitePlayerId;
         game.blackTimeRemainingMs = 0;
+        await this.processGameEnd(game);
         await game.save();
         this.broadcastGameUpdate(game);
         throw new BadRequestException('Time is up for Black');
@@ -272,6 +284,9 @@ export class GameService {
     if (chess.isGameOver()) {
       if (chess.isCheckmate()) {
         game.status = GameStatusEnum.CHECKMATE;
+        // The player who just moved (and thus is NOT the current turn) wins
+        game.winnerId =
+          chess.turn() === 'w' ? game.blackPlayerId : game.whitePlayerId;
       } else {
         game.status = GameStatusEnum.DRAW;
       }
@@ -279,7 +294,10 @@ export class GameService {
   }
 
   public async claimTimeout(id: string, authUser: AuthUser) {
-    const game = await this.gameModel.findById(id);
+    const game = await this.gameModel
+      .findById(id)
+      .populate('whitePlayer')
+      .populate('blackPlayer');
     if (!game) {
       throw new NotFoundException('Game not found');
     }
@@ -327,9 +345,12 @@ export class GameService {
       game.status = GameStatusEnum.TIMEOUT;
       if (isWhiteTurn) {
         game.whiteTimeRemainingMs = 0;
+        game.winnerId = game.blackPlayerId;
       } else {
         game.blackTimeRemainingMs = 0;
+        game.winnerId = game.whitePlayerId;
       }
+      await this.processGameEnd(game);
       await game.save();
       this.broadcastGameUpdate(game);
       return game;
@@ -354,14 +375,58 @@ export class GameService {
     return currentTimeMs - elapsedMs;
   }
 
+  private async processGameEnd(game: GameDocument): Promise<void> {
+    if (!game.whitePlayer || !game.blackPlayer) {
+      this.logger.warn(
+        `Cannot process rating for game ${String(game._id)} without populated players`,
+      );
+      return;
+    }
+
+    const whiteRating = game.whitePlayer.rating || 1200;
+    const blackRating = game.blackPlayer.rating || 1200;
+
+    let result: GameResult;
+    if (game.status === GameStatusEnum.DRAW) {
+      result = GameResult.DRAW;
+    } else if (game.winnerId?.toString() === game.whitePlayerId?.toString()) {
+      result = GameResult.WHITE_WINS;
+    } else {
+      result = GameResult.BLACK_WINS;
+    }
+
+    const ratingChanges = calculateRatingChanges(
+      whiteRating,
+      blackRating,
+      result,
+    );
+
+    game.whiteRatingChange = ratingChanges.white.delta;
+    game.blackRatingChange = ratingChanges.black.delta;
+
+    await Promise.all([
+      this.playerModel.updateOne(
+        { _id: game.whitePlayerId },
+        { $set: { rating: ratingChanges.white.newRating } },
+      ),
+      this.playerModel.updateOne(
+        { _id: game.blackPlayerId },
+        { $set: { rating: ratingChanges.black.newRating } },
+      ),
+    ]);
+  }
+
   private broadcastGameUpdate(game: GameDocument) {
     try {
       const chess = this.loadChessGame(game);
 
       const boardData = { fen: chess.fen(), board: chess.board() };
       this.gameGateway.emitGameUpdated(
-        game._id.toString(),
-        plainToInstance(GameDto, game.toJSON()),
+        String(game._id),
+        plainToInstance(
+          GameDto,
+          typeof game.toJSON === 'function' ? game.toJSON() : game,
+        ),
         boardData,
       );
     } catch (err) {
