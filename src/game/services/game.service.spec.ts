@@ -2141,4 +2141,247 @@ describe(GameService.name, () => {
       );
     });
   });
+
+  describe('processGameEnd rating calculations and player updates', () => {
+    it('should calculate and update ratings correctly on checkmate (White wins)', async () => {
+      const mockSave = jest.fn().mockResolvedValue(null);
+      const gameMock = {
+        _id: 'game-1',
+        whitePlayerId: 'player-1',
+        blackPlayerId: 'player-2',
+        status: GameStatusEnum.CHECKMATE,
+        winnerId: 'player-1',
+        whitePlayer: { rating: 1500 },
+        blackPlayer: { rating: 1500 },
+        whiteRatingChange: undefined,
+        blackRatingChange: undefined,
+        save: mockSave,
+      } as unknown as GameDocument;
+
+      await service['processGameEnd'](gameMock);
+
+      expect(gameMock.whiteRatingChange).toBe(16);
+      expect(gameMock.blackRatingChange).toBe(-16);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: 'player-1' },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: 'player-2' },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, -16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
+      );
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it('should calculate and update ratings correctly on draw', async () => {
+      const mockSave = jest.fn().mockResolvedValue(null);
+      const gameMock = {
+        _id: 'game-2',
+        whitePlayerId: 'player-1',
+        blackPlayerId: 'player-2',
+        status: GameStatusEnum.DRAW,
+        whitePlayer: { rating: 1500 },
+        blackPlayer: { rating: 1500 },
+        whiteRatingChange: undefined,
+        blackRatingChange: undefined,
+        save: mockSave,
+      } as unknown as GameDocument;
+
+      await service['processGameEnd'](gameMock);
+
+      expect(gameMock.whiteRatingChange).toBe(0);
+      expect(gameMock.blackRatingChange).toBe(0);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: 'player-1' },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 0],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: 'player-2' },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 0],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
+      );
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it('should calculate and update ratings correctly on timeout (Black wins)', async () => {
+      const mockSave = jest.fn().mockResolvedValue(null);
+      const gameMock = {
+        _id: 'game-3',
+        whitePlayerId: 'player-1',
+        blackPlayerId: 'player-2',
+        status: GameStatusEnum.TIMEOUT,
+        winnerId: 'player-2',
+        whitePlayer: { rating: 1500 },
+        blackPlayer: { rating: 1500 },
+        whiteRatingChange: undefined,
+        blackRatingChange: undefined,
+        save: mockSave,
+      } as unknown as GameDocument;
+
+      await service['processGameEnd'](gameMock);
+
+      expect(gameMock.whiteRatingChange).toBe(-16);
+      expect(gameMock.blackRatingChange).toBe(16);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: 'player-1' },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, -16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
+      );
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(playerModel.updateOne).toHaveBeenCalledWith(
+        { _id: 'player-2' },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [{ $ifNull: ['$rating', 1200] }, 16],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
+      );
+      expect(mockSave).toHaveBeenCalled();
+    });
+  });
+
+  describe(GameService.prototype.getGameUpdates$.name, () => {
+    it('should throw NotFoundException if game does not exist', async () => {
+      jest.spyOn(service, 'findOne').mockResolvedValue(null);
+
+      await expect(
+        new Promise((resolve, reject) => {
+          service.getGameUpdates$('non-existent-id').subscribe({
+            error: reject,
+            next: resolve,
+          });
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should emit initial state and then live updates', async () => {
+      const mockGame = {
+        _id: 'game1',
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        pgn: '',
+        toJSON: () => ({
+          _id: 'game1',
+          fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+          pgn: '',
+        }),
+      };
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockGame as any);
+
+      const events: any[] = [];
+      const subscription = service.getGameUpdates$('game1').subscribe({
+        next: (event) => events.push(event),
+      });
+
+      // Wait a microtask for the initial state promise (from) to resolve
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(events).toHaveLength(1);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(events[0].data.game._id).toBe('game1');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(events[0].data.board).toBeDefined();
+
+      // Send a live update
+      const liveGameDto = { _id: 'game1', fen: 'e4 FEN' } as any;
+      const liveBoardDto = { fen: 'e4 FEN', board: [] } as any;
+      service['gameUpdates$'].next({
+        gameId: 'game1',
+        game: liveGameDto,
+        board: liveBoardDto,
+      });
+
+      expect(events).toHaveLength(2);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(events[1].data.game._id).toBe('game1');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(events[1].data.game.fen).toBe('e4 FEN');
+
+      subscription.unsubscribe();
+    });
+
+    it('should filter live updates by gameId', async () => {
+      const mockGame = {
+        _id: 'game1',
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        pgn: '',
+        toJSON: () => ({
+          _id: 'game1',
+          fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+          pgn: '',
+        }),
+      };
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockGame as any);
+
+      const events: any[] = [];
+      const subscription = service.getGameUpdates$('game1').subscribe({
+        next: (event) => events.push(event),
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // Emitting to a different game
+      service['gameUpdates$'].next({
+        gameId: 'game2',
+        game: { _id: 'game2' } as any,
+        board: {} as any,
+      });
+
+      expect(events).toHaveLength(1); // Still only initial state
+
+      subscription.unsubscribe();
+    });
+  });
 });

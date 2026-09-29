@@ -15,7 +15,7 @@ const state = {
   playerId: null,    // MongoDB _id of the Player document
   gameId: null,      // MongoDB _id of the active Game document
   playerColor: null, // 'white' | 'black'
-  socket: null,      // socket.io instance
+  sse: null,         // EventSource instance
   chess: null,       // chess.js instance (client-side validation)
   board: null,       // chessboard.js instance
   gameData: null,    // latest game data from server
@@ -163,7 +163,7 @@ function handleGameUpdate(game, boardData) {
   }
 
   if (status === 'CHECKMATE') {
-    stopWebSocket();
+    stopSSE();
     // Determine winner
     const winnerIsWhite = state.chess.turn() === 'b'; // the player who just moved wins
     const iWon = (winnerIsWhite && state.playerColor === 'white') ||
@@ -173,7 +173,7 @@ function handleGameUpdate(game, boardData) {
   }
 
   if (status === 'TIMEOUT') {
-    stopWebSocket();
+    stopSSE();
     // In our current implementation, we know time ran out. 
     // We can infer who lost based on whose turn it was when time expired, or just show a generic timeout message.
     const myColor = state.playerColor === 'white' ? 'w' : 'b';
@@ -186,7 +186,7 @@ function handleGameUpdate(game, boardData) {
   }
 
   if (status === 'DRAW') {
-    stopWebSocket();
+    stopSSE();
     setStatus('🤝 Game ended in a draw.', 'over');
     return;
   }
@@ -303,22 +303,24 @@ function initBoard(orientation) {
   window.addEventListener('resize', () => state.board.resize());
 }
 
-// ── WebSocket lifecycle ───────────────────────────────────────────────────────
-function startWebSocket() {
-  if (!state.socket) {
-    state.socket = io(API_BASE_URL);
+// ── SSE lifecycle ────────────────────────────────────────────────────────────
+function startSSE() {
+  if (!state.sse) {
+    const url = `${API_BASE_URL}/games/${state.gameId}/sse?token=${state.token}`;
+    state.sse = new EventSource(url);
 
-    state.socket.on('connect', () => {
-      // The server will emit 'game-updated' with the current state as part of
-      // the join-game acknowledgement, so no extra HTTP fetch is needed.
-      state.socket.emit('join-game', state.gameId, () => {
-        // ACK: server confirmed the join and already pushed the initial state.
-      });
-    });
+    state.sse.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        handleGameUpdate(payload.game, payload.board);
+      } catch (err) {
+        console.error('Failed to parse SSE message:', err);
+      }
+    };
 
-    state.socket.on('game-updated', (payload) => {
-      handleGameUpdate(payload.game, payload.board);
-    });
+    state.sse.onerror = (err) => {
+      console.error('SSE Error:', err);
+    };
   }
 
   if (!state.visualClockTimer) {
@@ -326,10 +328,10 @@ function startWebSocket() {
   }
 }
 
-function stopWebSocket() {
-  if (state.socket) {
-    state.socket.disconnect();
-    state.socket = null;
+function stopSSE() {
+  if (state.sse) {
+    state.sse.close();
+    state.sse = null;
   }
   if (state.visualClockTimer) {
     clearInterval(state.visualClockTimer);
@@ -446,9 +448,9 @@ async function enterGame() {
     $('my-name-label').textContent = `${nickname} (${state.playerColor})`;
     initBoard(state.playerColor);
 
-    // 7. Start websocket
+    // 7. Start SSE
     setStatus('Connecting…', '');
-    startWebSocket();
+    startSSE();
 
   } catch (err) {
     showSetupError(err.message);

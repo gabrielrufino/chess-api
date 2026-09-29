@@ -9,7 +9,10 @@ import {
   NotFoundException,
   Query,
   UseInterceptors,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import {
   ApiBearerAuth,
   ApiTags,
@@ -149,5 +152,15 @@ export class GameController {
     const user = request.user;
     const game = await this.gameService.claimTimeout(id, user);
     return plainToInstance(GameDto, game.toJSON());
+  }
+
+  @ApiOkResponse({
+    description: 'Connect to the game update stream via SSE.',
+  })
+  @Sse(':id/sse')
+  public getGameSse(
+    @Param('id', ParseMongoIdPipe) id: string,
+  ): Observable<MessageEvent> {
+    return this.gameService.getGameUpdates$(id);
   }
 }

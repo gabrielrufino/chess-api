@@ -31,8 +31,8 @@ export class PlayerService implements OnModuleInit {
 
   public async onModuleInit(): Promise<void> {
     await this.playerModel.updateMany(
-      { rating: { $exists: true, $lt: 500 } },
-      { $inc: { rating: 1200 } },
+      { rating: { $exists: false } },
+      { $set: { rating: 1200 } },
     );
   }
 

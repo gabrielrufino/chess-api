@@ -34,6 +34,9 @@ export class GameGateway {
     @MessageBody() gameId: string,
     @ConnectedSocket() client: Socket,
   ) {
+    this.logger.warn(
+      'WebSocket connection established. WebSockets are deprecated and will be removed in a future release. Please migrate to the SSE endpoint: /games/:id/sse',
+    );
     if (!gameId || !isValidObjectId(gameId)) return { joined: false };
 
     try {

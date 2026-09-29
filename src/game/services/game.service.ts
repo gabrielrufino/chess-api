@@ -3,8 +3,11 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  MessageEvent,
   NotFoundException,
 } from '@nestjs/common';
+import { Subject, Observable, concat, from } from 'rxjs';
+import { filter, map } from 'rxjs/operators';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Game, GameDocument } from '../schemas/game.schema';
@@ -19,7 +22,13 @@ import { parseGameDuration } from '../utils/time-control.util';
 import { calculateRatingChanges, GameResult } from '../utils/elo.util';
 import { GameGateway } from '../gateways/game.gateway';
 import { plainToInstance } from 'class-transformer';
-import { GameDto } from '../dto/game-response.dto';
+import { GameDto, GameBoardDto } from '../dto/game-response.dto';
+
+interface GameUpdateEvent {
+  gameId: string;
+  game: GameDto;
+  board: GameBoardDto;
+}
 
 interface PopulatedGame extends Game {
   whitePlayer?: Player;
@@ -30,6 +39,7 @@ interface PopulatedGame extends Game {
 @Injectable()
 export class GameService {
   private readonly logger = new Logger(GameService.name);
+  private readonly gameUpdates$ = new Subject<GameUpdateEvent>();
 
   constructor(
     @InjectModel(Game.name)
@@ -220,25 +230,59 @@ export class GameService {
   }
 
   private canPossibilyCheckmate(chess: Chess, color: 'w' | 'b'): boolean {
-    if (chess.isInsufficientMaterial()) {
-      return false;
-    }
     const board = chess.board();
-    let hasNonKingPiece = false;
+    const oppPieces: string[] = [];
+    const flagPieces: string[] = [];
+
     for (const row of board) {
       for (const piece of row) {
-        if (piece && piece.color === color) {
-          if (piece.type !== 'k') {
-            hasNonKingPiece = true;
-            break;
+        if (piece) {
+          if (piece.color === color) {
+            oppPieces.push(piece.type);
+          } else {
+            flagPieces.push(piece.type);
           }
         }
       }
-      if (hasNonKingPiece) {
-        break;
-      }
     }
-    return hasNonKingPiece;
+
+    // Opponent only has King
+    if (oppPieces.length === 1) {
+      return false;
+    }
+
+    // If opponent has King + Bishop, and flagging player has only King
+    if (
+      oppPieces.length === 2 &&
+      oppPieces.includes('b') &&
+      flagPieces.length === 1
+    ) {
+      return false;
+    }
+
+    // If opponent has King + Knight, and flagging player has only King
+    if (
+      oppPieces.length === 2 &&
+      oppPieces.includes('n') &&
+      flagPieces.length === 1
+    ) {
+      return false;
+    }
+
+    // If opponent has King + two Knights, and flagging player has only King
+    if (
+      oppPieces.length === 3 &&
+      oppPieces.filter((t) => t === 'n').length === 2 &&
+      flagPieces.length === 1
+    ) {
+      return false;
+    }
+
+    if (chess.isInsufficientMaterial()) {
+      return false;
+    }
+
+    return oppPieces.some((type) => type !== 'k');
   }
 
   private async handleTimeControl(
@@ -502,20 +546,55 @@ export class GameService {
       const chess = this.loadChessGame(game);
 
       const boardData = { fen: chess.fen(), board: chess.board() };
-      this.gameGateway.emitGameUpdated(
-        String(game._id),
-        plainToInstance(
-          GameDto,
-          typeof game.toJSON === 'function' ? game.toJSON() : game,
-        ),
-        boardData,
+      const gameDto = plainToInstance(
+        GameDto,
+        typeof game.toJSON === 'function' ? game.toJSON() : game,
       );
+
+      this.gameGateway.emitGameUpdated(String(game._id), gameDto, boardData);
+
+      this.gameUpdates$.next({
+        gameId: String(game._id),
+        game: gameDto,
+        board: boardData,
+      });
     } catch (err) {
       this.logger.error(
         'Failed to broadcast game update',
         err instanceof Error ? err.stack : String(err),
       );
     }
+  }
+
+  public getGameUpdates$(gameId: string): Observable<MessageEvent> {
+    const initialState$ = from(
+      (async (): Promise<MessageEvent> => {
+        const game = await this.findOne(gameId);
+        if (!game) {
+          throw new NotFoundException(`Game with ID ${gameId} not found`);
+        }
+        const chess = this.loadChessGame(game);
+        const board = { fen: chess.fen(), board: chess.board() };
+        return {
+          data: {
+            game: plainToInstance(
+              GameDto,
+              typeof game.toJSON === 'function' ? game.toJSON() : game,
+            ),
+            board,
+          },
+        };
+      })(),
+    );
+
+    const liveUpdates$ = this.gameUpdates$.asObservable().pipe(
+      filter((event) => event.gameId === gameId),
+      map((event) => ({
+        data: { game: event.game, board: event.board },
+      })),
+    );
+
+    return concat(initialState$, liveUpdates$);
   }
 
   private loadChessGame(game: Pick<Game, 'pgn' | 'fen'>): Chess {
