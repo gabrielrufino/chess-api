@@ -8,6 +8,7 @@ import faker from '@faker-js/faker';
 import * as request from 'supertest';
 import { io, Socket } from 'socket.io-client';
 import { JwtService } from '@nestjs/jwt';
+import * as http from 'http';
 
 import { AuthModule } from '../src/auth/auth.module';
 import { AuthGuard } from '../src/auth/guards/auth.guard';
@@ -509,6 +510,99 @@ describe('GameModule (e2e)', () => {
         .post(`/games/${gameId}/claim-timeout`)
         .set('x-user-id', player2Id)
         .expect(HttpStatus.CREATED);
+    });
+  });
+
+  describe('SSE', () => {
+    it('Should receive game updates via SSE', (done) => {
+      app
+        .listen(0)
+        .then(async () => {
+          const port = app.getHttpServer().address().port;
+
+          const { authUserId: player1Id } = await createPlayer(app);
+          const { authUserId: player2Id } = await createPlayer(app);
+
+          const res1 = await request(app.getHttpServer())
+            .post('/games')
+            .set('x-user-id', player1Id)
+            .send({ duration: GameDurationEnum.FiveMinutes });
+
+          const gameId = res1.body._id as string;
+
+          await request(app.getHttpServer())
+            .post('/games')
+            .set('x-user-id', player2Id)
+            .send({ duration: GameDurationEnum.FiveMinutes });
+
+          const jwtService = app.get(JwtService);
+          const token = jwtService.sign({ sub: player1Id, isGuest: true });
+
+          // Connect using http.get
+          const req = http.get(
+            `http://127.0.0.1:${port}/games/${gameId}/sse?token=${token}`,
+            (res) => {
+              expect(res.statusCode).toBe(200);
+              expect(res.headers['content-type']).toContain(
+                'text/event-stream',
+              );
+
+              let buffer = '';
+              let eventsCount = 0;
+
+              res.on('data', (chunk) => {
+                const chunkStr = chunk.toString();
+                buffer += chunkStr;
+                // SSE events are separated by double newlines (\n\n)
+                const parts = buffer.split('\n\n');
+                // The last part might be incomplete, so keep it in buffer
+                buffer = parts.pop() || '';
+
+                for (const part of parts) {
+                  const lines = part.split('\n');
+                  const dataLine = lines.find((line) =>
+                    line.trim().startsWith('data:'),
+                  );
+                  if (dataLine) {
+                    const dataStr = dataLine.replace(/^data:\s*/, '').trim();
+                    const payload = JSON.parse(dataStr);
+                    eventsCount++;
+
+                    if (eventsCount === 1) {
+                      // Initial state event
+                      expect(payload.game).toBeDefined();
+                      expect(payload.board).toBeDefined();
+
+                      // Trigger a move now that connection is verified
+                      void (async () => {
+                        try {
+                          await request(app.getHttpServer())
+                            .post(`/games/${gameId}/moves`)
+                            .set('x-user-id', player1Id)
+                            .send({ move: 'e4' });
+                        } catch (err) {
+                          done(err);
+                        }
+                      })();
+                    } else if (eventsCount === 2) {
+                      // Live update event
+                      expect(payload.game).toBeDefined();
+                      expect(payload.board).toBeDefined();
+                      expect(payload.game.pgn).toContain('e4');
+                      req.destroy();
+                      done();
+                    }
+                  }
+                }
+              });
+            },
+          );
+
+          req.on('error', (err) => {
+            done(err);
+          });
+        })
+        .catch(done);
     });
   });
 });

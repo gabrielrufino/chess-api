@@ -74,8 +74,8 @@ describe('UserGamesController (e2e)', () => {
 
     expect(response.headers['content-type']).toContain('text/csv');
     expect(response.headers['content-disposition']).toBe(
-      'attachment; filename="meu_historico_xadrez.csv"',
+      'attachment; filename="my_chess_history.csv"',
     );
-    expect(response.text).toContain('Data,Adversario,Cor,Resultado,PGN');
+    expect(response.text).toContain('Date,Opponent,Color,Result,PGN');
   });
 });

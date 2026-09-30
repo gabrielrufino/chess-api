@@ -28,6 +28,9 @@ export class Player {
 
   @Prop()
   deletedAt?: Date;
+
+  @Prop({ default: 1200 })
+  rating: number;
 }
 
 export const PlayerSchema = SchemaFactory.createForClass(Player);

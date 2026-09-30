@@ -30,10 +30,7 @@ export class UserGamesController {
   })
   @Get('export')
   @Header('Content-Type', 'text/csv')
-  @Header(
-    'Content-Disposition',
-    'attachment; filename="meu_historico_xadrez.csv"',
-  )
+  @Header('Content-Disposition', 'attachment; filename="my_chess_history.csv"')
   public async exportGames(
     @Request() request: AuthRequest,
   ): Promise<StreamableFile> {

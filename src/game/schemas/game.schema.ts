@@ -42,6 +42,15 @@ export class Game {
   @Prop({ required: false })
   lastMoveAt?: Date;
 
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Player' })
+  winnerId?: mongoose.Types.ObjectId;
+
+  @Prop({ required: false })
+  whiteRatingChange?: number;
+
+  @Prop({ required: false })
+  blackRatingChange?: number;
+
   whitePlayer?: Player;
   blackPlayer?: Player;
   createdAt?: Date;

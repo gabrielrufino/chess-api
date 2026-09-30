@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 
@@ -20,7 +20,7 @@ import {
 } from 'unique-names-generator';
 
 @Injectable()
-export class PlayerService {
+export class PlayerService implements OnModuleInit {
   private static readonly NICKNAME_RESERVATION_TTL_MS = 5 * 60 * 1000; // 5 minutes
   constructor(
     @InjectModel(Player.name)
@@ -28,6 +28,13 @@ export class PlayerService {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
   ) {}
+
+  public async onModuleInit(): Promise<void> {
+    await this.playerModel.updateMany(
+      { rating: { $exists: false } },
+      { $set: { rating: 1200 } },
+    );
+  }
 
   public async create(authUser: AuthUser, createPlayerDto: CreatePlayerDto) {
     const reservedUserId = await this.cacheManager.get<string>(

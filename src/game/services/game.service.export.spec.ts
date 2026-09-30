@@ -99,7 +99,7 @@ describe('GameService exportUserGamesToCsv', () => {
     /* eslint-enable @typescript-eslint/no-unsafe-member-access */
 
     expect(csv).toBe(
-      'Data,Adversario,Cor,Resultado,PGN\n' +
+      'Date,Opponent,Color,Result,PGN\n' +
         '2023-10-10T10:00:00.000Z,"p2",White,CHECKMATE,"[Event ""Test Game""]\n1. e4"\n' +
         '2023-10-11T10:00:00.000Z,"p3",Black,DRAW,"1. d4"',
     );
@@ -232,9 +232,9 @@ describe('GameService exportUserGamesToCsv', () => {
       '2023-10-12T10:00:00.000Z,"John ""The Great"" Doe",White,RESIGNED,"1. e4"',
     );
     expect(lines[8]).toBe(
-      '2023-10-12T10:00:00.000Z,"Desconhecido",White,RESIGNED,""',
+      '2023-10-12T10:00:00.000Z,"Unknown",White,RESIGNED,""',
     );
-    expect(lines[9]).toBe(',"Desconhecido",Black,RESIGNED,""');
-    expect(lines[10]).toBe(',"Desconhecido",Black,RESIGNED,""');
+    expect(lines[9]).toBe(',"Unknown",Black,RESIGNED,""');
+    expect(lines[10]).toBe(',"Unknown",Black,RESIGNED,""');
   });
 });

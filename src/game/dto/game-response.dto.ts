@@ -87,6 +87,18 @@ export class GameDto {
     description: 'The populated black player details',
   })
   blackPlayer?: PlayerDto;
+
+  @Expose()
+  @ApiPropertyOptional({ description: 'The unique identifier of the winner' })
+  winnerId?: string;
+
+  @Expose()
+  @ApiPropertyOptional({ description: 'Rating change for the white player' })
+  whiteRatingChange?: number;
+
+  @Expose()
+  @ApiPropertyOptional({ description: 'Rating change for the black player' })
+  blackRatingChange?: number;
 }
 
 @Exclude()

@@ -3,10 +3,13 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  MessageEvent,
   NotFoundException,
 } from '@nestjs/common';
+import { Subject, Observable } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, ClientSession } from 'mongoose';
 import { Game, GameDocument } from '../schemas/game.schema';
 import { Player, PlayerDocument } from '../../player/schemas/player.schema';
 import { CreateGameDto } from '../dto/create-game.dto';
@@ -16,9 +19,16 @@ import { GameStatusEnum } from '../enumerables/game-status.enum';
 import { GameDurationEnum } from '../enumerables/game-duration.enum';
 import { Chess } from 'chess.js';
 import { parseGameDuration } from '../utils/time-control.util';
+import { calculateRatingChanges, GameResult } from '../utils/elo.util';
 import { GameGateway } from '../gateways/game.gateway';
 import { plainToInstance } from 'class-transformer';
-import { GameDto } from '../dto/game-response.dto';
+import { GameDto, GameBoardDto } from '../dto/game-response.dto';
+
+interface GameUpdateEvent {
+  gameId: string;
+  game: GameDto;
+  board: GameBoardDto;
+}
 
 interface PopulatedGame extends Game {
   whitePlayer?: Player;
@@ -29,6 +39,7 @@ interface PopulatedGame extends Game {
 @Injectable()
 export class GameService {
   private readonly logger = new Logger(GameService.name);
+  private readonly gameUpdates$ = new Subject<GameUpdateEvent>();
 
   constructor(
     @InjectModel(Game.name)
@@ -155,7 +166,10 @@ export class GameService {
     createMoveDto: CreateMoveDto,
     authUser: AuthUser,
   ) {
-    const rawGame = await this.gameModel.findById(id);
+    const rawGame = await this.gameModel
+      .findById(id)
+      .populate('whitePlayer')
+      .populate('blackPlayer');
     const game = this.validateGameForMove(rawGame);
 
     const rawPlayer = await this.playerModel.findOne({
@@ -171,9 +185,13 @@ export class GameService {
     this.validatePlayerTurn(game, rawPlayer, isWhiteTurn);
 
     const now = new Date();
-    await this.handleTimeControl(game, isWhiteTurn, now);
+    await this.handleTimeControl(game, isWhiteTurn, now, chess);
 
     this.updateGameState(game, chess, createMoveDto.move, now);
+
+    if (game.status !== GameStatusEnum.IN_PROGRESS) {
+      await this.processGameEnd(game);
+    }
 
     await game.save();
     this.broadcastGameUpdate(game);
@@ -211,10 +229,58 @@ export class GameService {
     }
   }
 
+  private canPossibilyCheckmate(chess: Chess, color: 'w' | 'b'): boolean {
+    const board = chess.board();
+    const oppPieces: string[] = [];
+    const flagPieces: string[] = [];
+
+    for (const row of board) {
+      for (const piece of row) {
+        if (piece) {
+          if (piece.color === color) {
+            oppPieces.push(piece.type);
+          } else {
+            flagPieces.push(piece.type);
+          }
+        }
+      }
+    }
+
+    // Opponent only has King
+    if (oppPieces.length === 1) {
+      return false;
+    }
+
+    // If opponent has King + Bishop, and flagging player has only King
+    if (
+      oppPieces.length === 2 &&
+      oppPieces.includes('b') &&
+      flagPieces.length === 1
+    ) {
+      return false;
+    }
+
+    // If opponent has King + Knight, and flagging player has only King
+    if (
+      oppPieces.length === 2 &&
+      oppPieces.includes('n') &&
+      flagPieces.length === 1
+    ) {
+      return false;
+    }
+
+    if (chess.isInsufficientMaterial()) {
+      return false;
+    }
+
+    return oppPieces.some((type) => type !== 'k');
+  }
+
   private async handleTimeControl(
     game: GameDocument,
     isWhiteTurn: boolean,
     now: Date,
+    chess: Chess,
   ): Promise<void> {
     if (
       !game.lastMoveAt ||
@@ -229,8 +295,16 @@ export class GameService {
     if (isWhiteTurn) {
       game.whiteTimeRemainingMs = remaining;
       if (remaining <= 0) {
-        game.status = GameStatusEnum.TIMEOUT;
         game.whiteTimeRemainingMs = 0;
+        const canCheckmate = this.canPossibilyCheckmate(chess, 'b');
+        if (canCheckmate) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.winnerId = game.blackPlayerId;
+        } else {
+          game.status = GameStatusEnum.DRAW;
+          game.winnerId = null;
+        }
+        await this.processGameEnd(game);
         await game.save();
         this.broadcastGameUpdate(game);
         throw new BadRequestException('Time is up for White');
@@ -239,8 +313,16 @@ export class GameService {
     } else {
       game.blackTimeRemainingMs = remaining;
       if (remaining <= 0) {
-        game.status = GameStatusEnum.TIMEOUT;
         game.blackTimeRemainingMs = 0;
+        const canCheckmate = this.canPossibilyCheckmate(chess, 'w');
+        if (canCheckmate) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.winnerId = game.whitePlayerId;
+        } else {
+          game.status = GameStatusEnum.DRAW;
+          game.winnerId = null;
+        }
+        await this.processGameEnd(game);
         await game.save();
         this.broadcastGameUpdate(game);
         throw new BadRequestException('Time is up for Black');
@@ -272,6 +354,9 @@ export class GameService {
     if (chess.isGameOver()) {
       if (chess.isCheckmate()) {
         game.status = GameStatusEnum.CHECKMATE;
+        // The player who just moved (and thus is NOT the current turn) wins
+        game.winnerId =
+          chess.turn() === 'w' ? game.blackPlayerId : game.whitePlayerId;
       } else {
         game.status = GameStatusEnum.DRAW;
       }
@@ -279,7 +364,10 @@ export class GameService {
   }
 
   public async claimTimeout(id: string, authUser: AuthUser) {
-    const game = await this.gameModel.findById(id);
+    const game = await this.gameModel
+      .findById(id)
+      .populate('whitePlayer')
+      .populate('blackPlayer');
     if (!game) {
       throw new NotFoundException('Game not found');
     }
@@ -324,12 +412,28 @@ export class GameService {
     const remaining = this.computeTimeRemaining(game, isWhiteTurn, now);
 
     if (remaining <= 0) {
-      game.status = GameStatusEnum.TIMEOUT;
       if (isWhiteTurn) {
         game.whiteTimeRemainingMs = 0;
+        const canCheckmate = this.canPossibilyCheckmate(chess, 'b');
+        if (canCheckmate) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.winnerId = game.blackPlayerId;
+        } else {
+          game.status = GameStatusEnum.DRAW;
+          game.winnerId = null;
+        }
       } else {
         game.blackTimeRemainingMs = 0;
+        const canCheckmate = this.canPossibilyCheckmate(chess, 'w');
+        if (canCheckmate) {
+          game.status = GameStatusEnum.TIMEOUT;
+          game.winnerId = game.whitePlayerId;
+        } else {
+          game.status = GameStatusEnum.DRAW;
+          game.winnerId = null;
+        }
       }
+      await this.processGameEnd(game);
       await game.save();
       this.broadcastGameUpdate(game);
       return game;
@@ -354,22 +458,299 @@ export class GameService {
     return currentTimeMs - elapsedMs;
   }
 
+  private async processGameEnd(game: GameDocument): Promise<void> {
+    if (!game.whitePlayer || !game.blackPlayer) {
+      this.logger.warn(
+        `Cannot process rating for game ${String(game._id)} without populated players`,
+      );
+      return;
+    }
+
+    if (
+      game.whiteRatingChange !== undefined ||
+      game.blackRatingChange !== undefined
+    ) {
+      return;
+    }
+
+    let session: ClientSession | null = null;
+    try {
+      session = await this.gameModel.db.startSession();
+    } catch {
+      this.logger.debug(
+        'Transactions are not supported by the database, falling back to non-transactional updates.',
+      );
+    }
+
+    if (session) {
+      try {
+        await session.withTransaction(async () => {
+          const whitePlayer = await this.playerModel
+            .findById(game.whitePlayerId)
+            .session(session);
+          const blackPlayer = await this.playerModel
+            .findById(game.blackPlayerId)
+            .session(session);
+
+          const whiteRating = whitePlayer?.rating ?? 1200;
+          const blackRating = blackPlayer?.rating ?? 1200;
+
+          let result: GameResult;
+          if (game.status === GameStatusEnum.DRAW) {
+            result = GameResult.DRAW;
+          } else if (
+            game.winnerId?.toString() === game.whitePlayerId?.toString()
+          ) {
+            result = GameResult.WHITE_WINS;
+          } else {
+            result = GameResult.BLACK_WINS;
+          }
+
+          const ratingChanges = calculateRatingChanges(
+            whiteRating,
+            blackRating,
+            result,
+          );
+
+          game.whiteRatingChange = ratingChanges.white.delta;
+          game.blackRatingChange = ratingChanges.black.delta;
+
+          await game.save({ session });
+
+          await this.playerModel.updateOne(
+            { _id: game.whitePlayerId },
+            [
+              {
+                $set: {
+                  rating: {
+                    $add: [
+                      { $ifNull: ['$rating', 1200] },
+                      ratingChanges.white.delta,
+                    ],
+                  },
+                },
+              },
+            ],
+            { session, updatePipeline: true },
+          );
+
+          await this.playerModel.updateOne(
+            { _id: game.blackPlayerId },
+            [
+              {
+                $set: {
+                  rating: {
+                    $add: [
+                      { $ifNull: ['$rating', 1200] },
+                      ratingChanges.black.delta,
+                    ],
+                  },
+                },
+              },
+            ],
+            { session, updatePipeline: true },
+          );
+        });
+        return;
+      } catch (err) {
+        const errObj = err as Record<string, unknown>;
+        const isReplicaSetError =
+          err instanceof Error &&
+          (err.message.includes('Transaction numbers are only allowed') ||
+            errObj.code === 20 ||
+            errObj.codeName === 'IllegalOperation');
+
+        if (isReplicaSetError) {
+          this.logger.warn(
+            'Transactions are not supported by this MongoDB topology (replica set required). Falling back to non-transactional updates.',
+          );
+          await session.endSession();
+          session = null;
+        } else {
+          this.logger.error(
+            'Transaction failed, rolling back',
+            err instanceof Error ? err.stack : String(err),
+          );
+          throw err;
+        }
+      } finally {
+        if (session) {
+          await session.endSession();
+        }
+      }
+    }
+
+    const whiteRating = game.whitePlayer.rating || 1200;
+    const blackRating = game.blackPlayer.rating || 1200;
+
+    let result: GameResult;
+    if (game.status === GameStatusEnum.DRAW) {
+      result = GameResult.DRAW;
+    } else if (game.winnerId?.toString() === game.whitePlayerId?.toString()) {
+      result = GameResult.WHITE_WINS;
+    } else {
+      result = GameResult.BLACK_WINS;
+    }
+
+    const ratingChanges = calculateRatingChanges(
+      whiteRating,
+      blackRating,
+      result,
+    );
+
+    game.whiteRatingChange = ratingChanges.white.delta;
+    game.blackRatingChange = ratingChanges.black.delta;
+
+    await game.save();
+
+    await Promise.all([
+      this.playerModel.updateOne(
+        { _id: game.whitePlayerId },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [
+                  { $ifNull: ['$rating', 1200] },
+                  ratingChanges.white.delta,
+                ],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
+      ),
+      this.playerModel.updateOne(
+        { _id: game.blackPlayerId },
+        [
+          {
+            $set: {
+              rating: {
+                $add: [
+                  { $ifNull: ['$rating', 1200] },
+                  ratingChanges.black.delta,
+                ],
+              },
+            },
+          },
+        ],
+        { updatePipeline: true },
+      ),
+    ]);
+  }
+
   private broadcastGameUpdate(game: GameDocument) {
     try {
       const chess = this.loadChessGame(game);
 
       const boardData = { fen: chess.fen(), board: chess.board() };
-      this.gameGateway.emitGameUpdated(
-        game._id.toString(),
-        plainToInstance(GameDto, game.toJSON()),
-        boardData,
+      const gameDto = plainToInstance(
+        GameDto,
+        typeof game.toJSON === 'function' ? game.toJSON() : game,
       );
+
+      this.gameGateway.emitGameUpdated(String(game._id), gameDto, boardData);
+
+      this.gameUpdates$.next({
+        gameId: String(game._id),
+        game: gameDto,
+        board: boardData,
+      });
     } catch (err) {
       this.logger.error(
         'Failed to broadcast game update',
         err instanceof Error ? err.stack : String(err),
       );
     }
+  }
+
+  private isAfterSnapshot(
+    event: GameUpdateEvent,
+    initialGame: GameDto | null,
+  ): boolean {
+    if (!initialGame) return true;
+    if (event.game.updatedAt && initialGame.updatedAt) {
+      return (
+        new Date(event.game.updatedAt).getTime() >
+        new Date(initialGame.updatedAt).getTime()
+      );
+    }
+    return (
+      event.game.pgn !== initialGame.pgn ||
+      event.game.status !== initialGame.status
+    );
+  }
+
+  public getGameUpdates$(gameId: string): Observable<MessageEvent> {
+    return new Observable<MessageEvent>((subscriber) => {
+      const buffer: GameUpdateEvent[] = [];
+      let initialGame: GameDto | null = null;
+      let initialLoaded = false;
+
+      const subscription = this.gameUpdates$
+        .asObservable()
+        .pipe(filter((event) => event.gameId === gameId))
+        .subscribe({
+          next: (event: GameUpdateEvent) => {
+            if (!initialLoaded) {
+              buffer.push(event);
+            } else {
+              const isNewer = this.isAfterSnapshot(event, initialGame);
+
+              if (isNewer) {
+                subscriber.next({
+                  data: { game: event.game, board: event.board },
+                });
+              }
+            }
+          },
+          error: (err) => subscriber.error(err),
+          complete: () => subscriber.complete(),
+        });
+
+      this.findOne(gameId)
+        .then((game) => {
+          if (!game) {
+            subscriber.error(
+              new NotFoundException(`Game with ID ${gameId} not found`),
+            );
+            return;
+          }
+          const chess = this.loadChessGame(game);
+          const board = { fen: chess.fen(), board: chess.board() };
+          initialGame = plainToInstance(
+            GameDto,
+            typeof game.toJSON === 'function' ? game.toJSON() : game,
+          );
+
+          subscriber.next({
+            data: {
+              game: initialGame,
+              board,
+            },
+          });
+
+          initialLoaded = true;
+
+          for (const event of buffer) {
+            const isNewer = this.isAfterSnapshot(event, initialGame);
+
+            if (isNewer) {
+              subscriber.next({
+                data: { game: event.game, board: event.board },
+              });
+            }
+          }
+          buffer.length = 0;
+        })
+        .catch((err) => {
+          subscriber.error(err);
+        });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    });
   }
 
   private loadChessGame(game: Pick<Game, 'pgn' | 'fen'>): Chess {
@@ -409,13 +790,13 @@ export class GameService {
       .sort({ createdAt: -1 })
       .lean<PopulatedGame[]>();
 
-    const csvLines: string[] = ['Data,Adversario,Cor,Resultado,PGN'];
+    const csvLines: string[] = ['Date,Opponent,Color,Result,PGN'];
 
     for (const game of games) {
       const isWhite = game.whitePlayerId?.toString() === player._id.toString();
       const rawOpponent = isWhite
-        ? (game.blackPlayer?.nickname ?? 'Desconhecido')
-        : (game.whitePlayer?.nickname ?? 'Desconhecido');
+        ? (game.blackPlayer?.nickname ?? 'Unknown')
+        : (game.whitePlayer?.nickname ?? 'Unknown');
       const opponent = this.escapeCsvCell(rawOpponent);
       const color = isWhite ? 'White' : 'Black';
       const result = game.status;
