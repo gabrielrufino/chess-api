@@ -50,12 +50,6 @@ export class AuthGuard implements CanActivate {
     if (type?.toLowerCase() === 'bearer') {
       return token;
     }
-    const isSse =
-      request.headers?.accept === 'text/event-stream' ||
-      request.url?.includes('/sse');
-    if (isSse && request.query?.token) {
-      return request.query.token as string;
-    }
     return undefined;
   }
 }

@@ -157,6 +157,7 @@ export class GameController {
   @ApiOkResponse({
     description: 'Connect to the game update stream via SSE.',
   })
+  @Public()
   @Sse(':id/sse')
   public async getGameSse(
     @Param('id', ParseMongoIdPipe) id: string,

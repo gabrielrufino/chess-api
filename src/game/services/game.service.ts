@@ -9,7 +9,7 @@ import {
 import { Subject, Observable } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, ClientSession } from 'mongoose';
 import { Game, GameDocument } from '../schemas/game.schema';
 import { Player, PlayerDocument } from '../../player/schemas/player.schema';
 import { CreateGameDto } from '../dto/create-game.dto';
@@ -473,6 +473,113 @@ export class GameService {
       return;
     }
 
+    let session: ClientSession | null = null;
+    try {
+      session = await this.gameModel.db.startSession();
+    } catch {
+      this.logger.debug(
+        'Transactions are not supported by the database, falling back to non-transactional updates.',
+      );
+    }
+
+    if (session) {
+      try {
+        await session.withTransaction(async () => {
+          const whitePlayer = await this.playerModel
+            .findById(game.whitePlayerId)
+            .session(session);
+          const blackPlayer = await this.playerModel
+            .findById(game.blackPlayerId)
+            .session(session);
+
+          const whiteRating = whitePlayer?.rating ?? 1200;
+          const blackRating = blackPlayer?.rating ?? 1200;
+
+          let result: GameResult;
+          if (game.status === GameStatusEnum.DRAW) {
+            result = GameResult.DRAW;
+          } else if (
+            game.winnerId?.toString() === game.whitePlayerId?.toString()
+          ) {
+            result = GameResult.WHITE_WINS;
+          } else {
+            result = GameResult.BLACK_WINS;
+          }
+
+          const ratingChanges = calculateRatingChanges(
+            whiteRating,
+            blackRating,
+            result,
+          );
+
+          game.whiteRatingChange = ratingChanges.white.delta;
+          game.blackRatingChange = ratingChanges.black.delta;
+
+          await game.save({ session });
+
+          await this.playerModel.updateOne(
+            { _id: game.whitePlayerId },
+            [
+              {
+                $set: {
+                  rating: {
+                    $add: [
+                      { $ifNull: ['$rating', 1200] },
+                      ratingChanges.white.delta,
+                    ],
+                  },
+                },
+              },
+            ],
+            { session, updatePipeline: true },
+          );
+
+          await this.playerModel.updateOne(
+            { _id: game.blackPlayerId },
+            [
+              {
+                $set: {
+                  rating: {
+                    $add: [
+                      { $ifNull: ['$rating', 1200] },
+                      ratingChanges.black.delta,
+                    ],
+                  },
+                },
+              },
+            ],
+            { session, updatePipeline: true },
+          );
+        });
+        return;
+      } catch (err) {
+        const errObj = err as Record<string, unknown>;
+        const isReplicaSetError =
+          err instanceof Error &&
+          (err.message.includes('Transaction numbers are only allowed') ||
+            errObj.code === 20 ||
+            errObj.codeName === 'IllegalOperation');
+
+        if (isReplicaSetError) {
+          this.logger.warn(
+            'Transactions are not supported by this MongoDB topology (replica set required). Falling back to non-transactional updates.',
+          );
+          await session.endSession();
+          session = null;
+        } else {
+          this.logger.error(
+            'Transaction failed, rolling back',
+            err instanceof Error ? err.stack : String(err),
+          );
+          throw err;
+        }
+      } finally {
+        if (session) {
+          await session.endSession();
+        }
+      }
+    }
+
     const whiteRating = game.whitePlayer.rating || 1200;
     const blackRating = game.blackPlayer.rating || 1200;
 
@@ -557,6 +664,23 @@ export class GameService {
     }
   }
 
+  private isAfterSnapshot(
+    event: GameUpdateEvent,
+    initialGame: GameDto | null,
+  ): boolean {
+    if (!initialGame) return true;
+    if (event.game.updatedAt && initialGame.updatedAt) {
+      return (
+        new Date(event.game.updatedAt).getTime() >
+        new Date(initialGame.updatedAt).getTime()
+      );
+    }
+    return (
+      event.game.pgn !== initialGame.pgn ||
+      event.game.status !== initialGame.status
+    );
+  }
+
   public getGameUpdates$(gameId: string): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
       const buffer: GameUpdateEvent[] = [];
@@ -571,18 +695,7 @@ export class GameService {
             if (!initialLoaded) {
               buffer.push(event);
             } else {
-              const isNewer = (() => {
-                if (!initialGame) return true;
-                if (event.game.updatedAt && initialGame.updatedAt) {
-                  const eventTime = new Date(event.game.updatedAt).getTime();
-                  const initialTime = new Date(initialGame.updatedAt).getTime();
-                  if (eventTime > initialTime) return true;
-                }
-                return (
-                  event.game.pgn !== initialGame.pgn ||
-                  event.game.status !== initialGame.status
-                );
-              })();
+              const isNewer = this.isAfterSnapshot(event, initialGame);
 
               if (isNewer) {
                 subscriber.next({
@@ -620,18 +733,7 @@ export class GameService {
           initialLoaded = true;
 
           for (const event of buffer) {
-            const isNewer = (() => {
-              if (!initialGame) return true;
-              if (event.game.updatedAt && initialGame.updatedAt) {
-                const eventTime = new Date(event.game.updatedAt).getTime();
-                const initialTime = new Date(initialGame.updatedAt).getTime();
-                if (eventTime > initialTime) return true;
-              }
-              return (
-                event.game.pgn !== initialGame.pgn ||
-                event.game.status !== initialGame.status
-              );
-            })();
+            const isNewer = this.isAfterSnapshot(event, initialGame);
 
             if (isNewer) {
               subscriber.next({
