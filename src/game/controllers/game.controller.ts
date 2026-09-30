@@ -158,9 +158,13 @@ export class GameController {
     description: 'Connect to the game update stream via SSE.',
   })
   @Sse(':id/sse')
-  public getGameSse(
+  public async getGameSse(
     @Param('id', ParseMongoIdPipe) id: string,
-  ): Observable<MessageEvent> {
+  ): Promise<Observable<MessageEvent>> {
+    const game = await this.gameService.findOne(id);
+    if (!game) {
+      throw new NotFoundException(`Game with ID ${id} not found`);
+    }
     return this.gameService.getGameUpdates$(id);
   }
 }

@@ -588,6 +588,7 @@ describe('GameModule (e2e)', () => {
                       // Live update event
                       expect(payload.game).toBeDefined();
                       expect(payload.board).toBeDefined();
+                      expect(payload.game.pgn).toContain('e4');
                       req.destroy();
                       done();
                     }

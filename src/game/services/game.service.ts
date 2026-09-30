@@ -6,8 +6,8 @@ import {
   MessageEvent,
   NotFoundException,
 } from '@nestjs/common';
-import { Subject, Observable, concat, from } from 'rxjs';
-import { filter, map } from 'rxjs/operators';
+import { Subject, Observable } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Game, GameDocument } from '../schemas/game.schema';
@@ -264,15 +264,6 @@ export class GameService {
     if (
       oppPieces.length === 2 &&
       oppPieces.includes('n') &&
-      flagPieces.length === 1
-    ) {
-      return false;
-    }
-
-    // If opponent has King + two Knights, and flagging player has only King
-    if (
-      oppPieces.length === 3 &&
-      oppPieces.filter((t) => t === 'n').length === 2 &&
       flagPieces.length === 1
     ) {
       return false;
@@ -567,34 +558,97 @@ export class GameService {
   }
 
   public getGameUpdates$(gameId: string): Observable<MessageEvent> {
-    const initialState$ = from(
-      (async (): Promise<MessageEvent> => {
-        const game = await this.findOne(gameId);
-        if (!game) {
-          throw new NotFoundException(`Game with ID ${gameId} not found`);
-        }
-        const chess = this.loadChessGame(game);
-        const board = { fen: chess.fen(), board: chess.board() };
-        return {
-          data: {
-            game: plainToInstance(
-              GameDto,
-              typeof game.toJSON === 'function' ? game.toJSON() : game,
-            ),
-            board,
+    return new Observable<MessageEvent>((subscriber) => {
+      const buffer: GameUpdateEvent[] = [];
+      let initialGame: GameDto | null = null;
+      let initialLoaded = false;
+
+      const subscription = this.gameUpdates$
+        .asObservable()
+        .pipe(filter((event) => event.gameId === gameId))
+        .subscribe({
+          next: (event: GameUpdateEvent) => {
+            if (!initialLoaded) {
+              buffer.push(event);
+            } else {
+              const isNewer = (() => {
+                if (!initialGame) return true;
+                if (event.game.updatedAt && initialGame.updatedAt) {
+                  const eventTime = new Date(event.game.updatedAt).getTime();
+                  const initialTime = new Date(initialGame.updatedAt).getTime();
+                  if (eventTime > initialTime) return true;
+                }
+                return (
+                  event.game.pgn !== initialGame.pgn ||
+                  event.game.status !== initialGame.status
+                );
+              })();
+
+              if (isNewer) {
+                subscriber.next({
+                  data: { game: event.game, board: event.board },
+                });
+              }
+            }
           },
-        };
-      })(),
-    );
+          error: (err) => subscriber.error(err),
+          complete: () => subscriber.complete(),
+        });
 
-    const liveUpdates$ = this.gameUpdates$.asObservable().pipe(
-      filter((event) => event.gameId === gameId),
-      map((event) => ({
-        data: { game: event.game, board: event.board },
-      })),
-    );
+      this.findOne(gameId)
+        .then((game) => {
+          if (!game) {
+            subscriber.error(
+              new NotFoundException(`Game with ID ${gameId} not found`),
+            );
+            return;
+          }
+          const chess = this.loadChessGame(game);
+          const board = { fen: chess.fen(), board: chess.board() };
+          initialGame = plainToInstance(
+            GameDto,
+            typeof game.toJSON === 'function' ? game.toJSON() : game,
+          );
 
-    return concat(initialState$, liveUpdates$);
+          subscriber.next({
+            data: {
+              game: initialGame,
+              board,
+            },
+          });
+
+          initialLoaded = true;
+
+          for (const event of buffer) {
+            const isNewer = (() => {
+              if (!initialGame) return true;
+              if (event.game.updatedAt && initialGame.updatedAt) {
+                const eventTime = new Date(event.game.updatedAt).getTime();
+                const initialTime = new Date(initialGame.updatedAt).getTime();
+                if (eventTime > initialTime) return true;
+              }
+              return (
+                event.game.pgn !== initialGame.pgn ||
+                event.game.status !== initialGame.status
+              );
+            })();
+
+            if (isNewer) {
+              subscriber.next({
+                data: { game: event.game, board: event.board },
+              });
+            }
+          }
+          buffer.length = 0;
+        })
+        .catch((err) => {
+          subscriber.error(err);
+        });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    });
   }
 
   private loadChessGame(game: Pick<Game, 'pgn' | 'fen'>): Chess {
