@@ -57,9 +57,13 @@ graph LR
 src/mcp/
 ├── mcp.module.ts          # Dynamic module (imports GameModule, PlayerModule, JwtModule)
 ├── mcp.controller.ts      # HTTP endpoints: GET /mcp (SSE), POST /mcp (JSON-RPC)
+├── mcp.controller.spec.ts # Session lifecycle, transport delegation, tool callback tests
 ├── mcp.service.ts         # Business logic: game CRUD, moves, clocks, ratings
+├── mcp.service.spec.ts    # Tool handler, clock, timeout and rating tests
 ├── mcp.provider.ts        # Tool definitions, resource definitions, JWT verification
+├── mcp.provider.spec.ts   # Tool registry, JWT resolution and resource read tests
 ├── mcp.constants.ts       # Server info constants
+├── mcp.constants.spec.ts  # Server info constant tests
 ├── dto/
 │   └── mcp-game.dto.ts    # DTOs: McpGameDto, McpBoardDto, McpPlayerDto, McpGameUpdateEvent
 └── README.md              # Usage guide & curl examples
@@ -147,3 +151,22 @@ Sessions live in an in-memory `Map` keyed by session ID. Each session tracks its
 - All tool errors are caught and returned as MCP-compliant error results (`isError: true`).
 - Connection failures during initialization return HTTP 500 with an error message.
 - Missing or invalid session IDs return HTTP 400 for non-initialize requests.
+
+## Testing
+
+Unit tests live next to the MCP source files and mock the MCP SDK transport/server, MongoDB models and the game gateway.
+
+```bash
+# Run only the MCP unit tests
+npm test -- src/mcp
+
+# Collect coverage for the module
+npm run test:cov -- src/mcp
+```
+
+| Suite | Main coverage |
+|-------|---------------|
+| `mcp.controller.spec.ts` | Session creation/reuse, TTL eviction, SSE/JSON-RPC delegation, auth token caching, tool callback and initialization failures |
+| `mcp.provider.spec.ts` | Tool/resource definitions, JWT `playerId` resolution, unknown tools, error wrapping and resource reads |
+| `mcp.service.spec.ts` | Game creation/matching, pagination, moves, clocks, timeouts, rating updates and timeout claims |
+| `mcp.constants.spec.ts` | Server name and version constants |
