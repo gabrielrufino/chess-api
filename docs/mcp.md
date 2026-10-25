@@ -38,15 +38,14 @@ graph LR
     end
 
     subgraph API ["Chess API — NestJS"]
-        direction TB
-        C[McpGatewayController<br/>@ Controller()]
-        P[GameMcpProvider<br/>Tool Registry + JWT Verify]
-        S[GameMcpService<br/>Business Logic + DB]
+        C[McpGatewayController]
+        P[GameMcpProvider]
+        S[GameMcpService]
+        M[(MongoDB)]
 
         C -->|delegates| P
         P -->|calls| S
-
-        S <-->|MongoDB| M[(MongoDB)]
+        S <-->|MongoDB| M
     end
 
     A <-->|"SSE / JSON-RPC"| C
