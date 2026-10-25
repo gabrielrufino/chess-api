@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# ──────────────────────────────────────────────────
+# Pre-commit hooks: lint → build → unit-tests → e2e-tests
+# ──────────────────────────────────────────────────
+
+echo "⬛ Running ESLint..."
+npx eslint "{src,test}/**/*.ts" --fix --no-warn-ignored
+
+echo "⬛ Building project..."
+npm run build
+
+echo "⬛ Running unit tests..."
+npm run test
+
+echo "⬛ Running e2e tests..."
+npm run test:e2e
+
+echo "✅ All checks passed."

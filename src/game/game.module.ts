@@ -15,6 +15,6 @@ import { GameGateway } from './gateways/game.gateway';
   ],
   controllers: [GameController, UserGamesController],
   providers: [GameService, GameGateway],
-  exports: [MongooseModule],
+  exports: [MongooseModule, GameGateway],
 })
 export class GameModule {}
