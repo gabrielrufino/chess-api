@@ -22,6 +22,14 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
+    // Allow MCP protocol endpoints — authentication is handled per-tool call
+    // via the session established during the initial JSON-RPC handshake.
+    // The MCP transport does not send Authorization headers between calls.
+    const request = context.switchToHttp().getRequest<AuthRequest>();
+    if (request.path?.startsWith('/mcp')) {
+      return true;
+    }
+
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -30,7 +38,6 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<AuthRequest>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
