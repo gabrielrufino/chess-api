@@ -4,7 +4,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { MongooseModule } from '@nestjs/mongoose';
 import { CacheModule } from '@nestjs/cache-manager';
 import { LoggerModule } from 'nestjs-pino';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
 import { AppController } from './app.controller';
@@ -12,7 +12,9 @@ import { GameModule } from './game/game.module';
 import { PlayerModule } from './player/player.module';
 import { AuthModule } from './auth/auth.module';
 import { GuestUserModule } from './guest-user/guest-user.module';
+import { McpModule } from './mcp/mcp.module';
 import { AuthGuard } from './auth/guards/auth.guard';
+import { McpAwareThrottlerGuard } from './auth/guards/mcp-aware-throttler.guard';
 
 @Module({
   imports: [
@@ -39,12 +41,13 @@ import { AuthGuard } from './auth/guards/auth.guard';
     GuestUserModule,
     PlayerModule,
     GameModule,
+    McpModule.register(), // Enable MCP endpoints
   ],
   controllers: [AppController],
   providers: [
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: McpAwareThrottlerGuard,
     },
     {
       provide: APP_GUARD,

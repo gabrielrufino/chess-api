@@ -11,3 +11,8 @@ Welcome! If you are an AI coding assistant working on this repository, please ad
 ## 2. API Design
 - The API is stateless with anonymous guest access via JWT. Do not introduce mandatory persistent user registration.
 - Any new mutation endpoints must return appropriate HTTP status codes (200 OK for updates, 201 Created for new resources).
+
+## 3. MCP Module Documentation
+- **Always update `docs/mcp.md` when modifying files under `src/mcp/`.**
+- Review and keep the documentation in sync with tool definitions, authentication flow, session lifecycle, error handling, architecture diagrams, and available tools/resources tables.
+- This rule applies to all commits that touch the MCP module — no exceptions.
